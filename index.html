@@ -221,10 +221,8 @@
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
     const deckElement = document.getElementById('deck');
-    let selectedCards = [];
-    let extraCards = [];
-    let greenCard = null;
-    let purpleCard = null;
+    let selectedCards = []; // As duas cartas da mão
+    let communityCards = []; // As cartas da mesa
 
     function createCard(value, suit) {
         const card = document.createElement('div');
@@ -237,92 +235,69 @@
     function selectCard(cardElement) {
         const cardText = cardElement.textContent;
 
+        // Selecionar as duas primeiras cartas da mão
         if (selectedCards.length < 2 && !cardElement.classList.contains('selected') && !isAlreadySelected(cardElement)) {
             cardElement.classList.add('selected');
             selectedCards.push(cardText);
-            updateSelection();
-        } else if (extraCards.length < 3 && !cardElement.classList.contains('selected-orange') && !isAlreadySelected(cardElement)) {
-            cardElement.classList.add('selected-orange');
-            extraCards.push(cardText);
-            updateExtraSelection();
-        } else if (!greenCard && !cardElement.classList.contains('selected-green') && !isAlreadySelected(cardElement)) {
-            cardElement.classList.add('selected-green');
-            greenCard = cardText;
-            updateGreenSelection();
-        } else if (!purpleCard && !cardElement.classList.contains('selected-purple') && !isAlreadySelected(cardElement)) {
-            cardElement.classList.add('selected-purple');
-            purpleCard = cardText;
-            updatePurpleSelection();
-        } else {
+            updateHand();
+        } 
+        // Selecionar as cartas comunitárias (até 5 no total)
+        else if (communityCards.length < 5 && !cardElement.classList.contains('selected-community') && !isAlreadySelected(cardElement)) {
+            cardElement.classList.add('selected-community');
+            communityCards.push(cardText);
+            updateCommunityCards();
+        } 
+        // Remover cartas
+        else {
             if (cardElement.classList.contains('selected')) {
                 cardElement.classList.remove('selected');
                 selectedCards = selectedCards.filter(c => c !== cardText);
-                updateSelection();
-            } else if (cardElement.classList.contains('selected-orange')) {
-                cardElement.classList.remove('selected-orange');
-                extraCards = extraCards.filter(c => c !== cardText);
-                updateExtraSelection();
-            } else if (cardElement.classList.contains('selected-green')) {
-                cardElement.classList.remove('selected-green');
-                greenCard = null;
-                updateGreenSelection();
-            } else if (cardElement.classList.contains('selected-purple')) {
-                cardElement.classList.remove('selected-purple');
-                purpleCard = null;
-                updatePurpleSelection();
+                updateHand();
+            } else if (cardElement.classList.contains('selected-community')) {
+                cardElement.classList.remove('selected-community');
+                communityCards = communityCards.filter(c => c !== cardText);
+                updateCommunityCards();
             }
         }
     }
 
     function isAlreadySelected(cardElement) {
-        return cardElement.classList.contains('selected') ||
-               cardElement.classList.contains('selected-orange') ||
-               cardElement.classList.contains('selected-green') ||
-               cardElement.classList.contains('selected-purple');
+        return cardElement.classList.contains('selected') || cardElement.classList.contains('selected-community');
     }
 
-    function updateSelection() {
+    function updateHand() {
         document.getElementById('selectedCard1').textContent = selectedCards[0] || '1ª Carta';
         document.getElementById('selectedCard2').textContent = selectedCards[1] || '2ª Carta';
 
-        analyzeGameState([...selectedCards]);
+        analyzeGameState(selectedCards, communityCards);
     }
 
-    function updateExtraSelection() {
-        document.getElementById('extraCard1').textContent = extraCards[0] || '1ª Pre Flop';
-        document.getElementById('extraCard2').textContent = extraCards[1] || '2ª Pre Flop';
-        document.getElementById('extraCard3').textContent = extraCards[2] || '3ª Pre Flop';
+    function updateCommunityCards() {
+        document.getElementById('communityCard1').textContent = communityCards[0] || '1ª Mesa';
+        document.getElementById('communityCard2').textContent = communityCards[1] || '2ª Mesa';
+        document.getElementById('communityCard3').textContent = communityCards[2] || '3ª Mesa';
+        document.getElementById('communityCard4').textContent = communityCards[3] || '4ª Mesa';
+        document.getElementById('communityCard5').textContent = communityCards[4] || '5ª Mesa';
 
-        analyzeGameState([...selectedCards, ...extraCards]);
+        analyzeGameState(selectedCards, communityCards);
     }
 
-    function updateGreenSelection() {
-        document.getElementById('greenCard').textContent = greenCard || 'Carta Adicional';
-
-        analyzeGameState([...selectedCards, ...extraCards, greenCard]);
-    }
-
-    function updatePurpleSelection() {
-        document.getElementById('purpleCard').textContent = purpleCard || 'Última Carta';
-
-        analyzeGameState([...selectedCards, ...extraCards, greenCard, purpleCard]);
-    }
-
-    function analyzeGameState(currentCards) {
-        const analysis = evaluateHand(currentCards);
-        const recommendation = generateRecommendation(currentCards);
+    function analyzeGameState(hand, communityCards) {
+        const combinedCards = [...hand, ...communityCards];
+        const analysis = evaluateHand(combinedCards);
+        const recommendation = generateRecommendation(hand, communityCards);
 
         document.getElementById('recommendation').innerHTML = recommendation;
         document.getElementById('probabilities').innerHTML = analysis;
     }
 
-    function evaluateHand(selectedCards) {
-        if (selectedCards.length === 0) {
+    function evaluateHand(allCards) {
+        if (allCards.length === 0) {
             return "Selecione cartas para verificar as combinações possíveis.";
         }
 
-        const valuesOnly = selectedCards.map(card => card.slice(0, -1));
-        const suitsOnly = selectedCards.map(card => card.slice(-1));
+        const valuesOnly = allCards.map(card => card.slice(0, -1));
+        const suitsOnly = allCards.map(card => card.slice(-1));
 
         const valueCounts = {};
         const suitCounts = {};
@@ -380,12 +355,16 @@
             : "Nenhuma combinação relevante encontrada.";
     }
 
-    function generateRecommendation(selectedCards) {
-        if (selectedCards.length < 2) {
+    function generateRecommendation(hand, communityCards) {
+        if (hand.length < 2) {
             return "Selecione pelo menos 2 cartas para receber uma recomendação.";
         }
 
-        // Simples lógica para recomendação
+        // Simples lógica para recomendação (pode ser melhorada com regras avançadas)
+        if (communityCards.length < 3) {
+            return "Recomendação: Aguarde as cartas da mesa.";
+        }
+
         const randomChoice = Math.random();
         if (randomChoice < 0.2) return "Recomendação: Desistir.";
         if (randomChoice < 0.4) return "Recomendação: Pedir carta.";
