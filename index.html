@@ -70,7 +70,7 @@
     </style>
 </head>
 <body>
-    <h2>Análise de Poker</h2>
+    <h2>Análise de Poker com Inteligência</h2>
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
@@ -144,45 +144,36 @@
             return "Carta Alta";
         }
 
-        function calculateOpponentProbabilities() {
+        function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
-            let strongerHands = 0;
-            const totalHands = remainingDeck.length * (remainingDeck.length - 1) / 2;
+            let opponentWins = 0, playerWins = 0, draws = 0;
+            const totalSimulations = 5000; // Número de simulações (Monte Carlo)
 
-            for (let i = 0; i < remainingDeck.length; i++) {
-                for (let j = i + 1; j < remainingDeck.length; j++) {
-                    const opponentHand = [remainingDeck[i], remainingDeck[j], ...communityCards];
-                    const opponentStrength = evaluateHand(opponentHand);
-                    const yourStrength = evaluateHand([...playerHand, ...communityCards]);
-                    if (compareHands(opponentStrength, yourStrength) > 0) {
-                        strongerHands++;
-                    }
+            for (let i = 0; i < totalSimulations; i++) {
+                const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
+                const opponentHand = shuffledDeck.slice(0, 2);
+                const playerBest = evaluateHand([...playerHand, ...communityCards]);
+                const opponentBest = evaluateHand([...opponentHand, ...communityCards]);
+
+                if (compareHands(opponentBest, playerBest) > 0) {
+                    opponentWins++;
+                } else if (compareHands(playerBest, opponentBest) > 0) {
+                    playerWins++;
+                } else {
+                    draws++;
                 }
             }
 
-            return ((strongerHands / totalHands) * 100).toFixed(2);
+            return {
+                opponentWinRate: (opponentWins / totalSimulations * 100).toFixed(2),
+                playerWinRate: (playerWins / totalSimulations * 100).toFixed(2),
+                drawRate: (draws / totalSimulations * 100).toFixed(2)
+            };
         }
 
-        function compareHands(opponentStrength, yourStrength) {
+        function compareHands(hand1, hand2) {
             const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            return ranking.indexOf(opponentStrength) - ranking.indexOf(yourStrength);
-        }
-
-        function getRecommendation(handStrength, opponentProbability) {
-            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            const mediumHands = ["Trinca", "Dois Pares"];
-            const weakHands = ["Par", "Carta Alta"];
-
-            if (strongHands.includes(handStrength) && opponentProbability < 40) {
-                return "Recomendação: Aposte agressivamente (Raise).";
-            }
-            if (mediumHands.includes(handStrength) && opponentProbability < 60) {
-                return "Recomendação: Continue no jogo (Call).";
-            }
-            if (weakHands.includes(handStrength) || opponentProbability >= 60) {
-                return "Recomendação: Cuidado! Considere desistir (Fold).";
-            }
-            return "Recomendação: Analise a mesa com cautela.";
+            return ranking.indexOf(hand1) - ranking.indexOf(hand2);
         }
 
         function updateGameState() {
@@ -195,13 +186,27 @@
 
             const allCards = [...playerHand, ...communityCards];
             const handStrength = evaluateHand(allCards);
-            const opponentProbabilities = calculateOpponentProbabilities();
+            const opponentSimulations = simulateOpponentHands();
 
-            const recommendation = getRecommendation(handStrength, opponentProbabilities);
+            const recommendation = getRecommendation(handStrength, opponentSimulations.opponentWinRate);
 
             recommendationElement.textContent = recommendation;
-            probabilitiesElement.textContent = `Combinação com sua mão: ${handStrength}.`;
-            opponentAnalysisElement.textContent = `Probabilidade de oponente ter uma mão mais forte: ${opponentProbabilities}%.`;
+            probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
+            opponentAnalysisElement.textContent = `
+                Oponente vitória: ${opponentSimulations.opponentWinRate}%,
+                Você vitória: ${opponentSimulations.playerWinRate}%,
+                Empates: ${opponentSimulations.drawRate}%.`;
+        }
+
+        function getRecommendation(handStrength, opponentWinRate) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            if (strongHands.includes(handStrength) && opponentWinRate < 40) {
+                return "Recomendação: Aposte agressivamente (Raise).";
+            }
+            if (opponentWinRate >= 40) {
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
+            }
+            return "Recomendação: Jogue com cautela (Call ou Check).";
         }
 
         initializeDeck();
