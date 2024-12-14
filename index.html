@@ -1,1 +1,635 @@
+<!DOCTYPE html>
 
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Análise de Poker</title>
+
+    <style>
+
+        body {
+
+            font-family: Arial, sans-serif;
+
+            margin: 0;
+
+            padding: 0;
+
+            background-color: #f8f9fa;
+
+            color: #212529;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            justify-content: center;
+
+            min-height: 100vh;
+
+        }
+
+
+
+        h1 {
+
+            font-size: 2rem;
+
+            color: #343a40;
+
+            margin-top: 20px;
+
+        }
+
+
+
+        h2 {
+
+            font-size: 1.5rem;
+
+            color: #495057;
+
+            margin: 20px 0 10px 0;
+
+        }
+
+
+
+        .deck {
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 8px;
+
+            justify-content: center;
+
+            padding: 10px;
+
+            background: #ffffff;
+
+            border: 1px solid #ced4da;
+
+            border-radius: 8px;
+
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+            margin-top: 20px;
+
+        }
+
+
+
+        .card {
+
+            width: 50px;
+
+            height: 70px;
+
+            border-radius: 5px;
+
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            font-weight: bold;
+
+            font-size: 14px;
+
+            cursor: pointer;
+
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+
+            background-color: #ffffff;
+
+            border: 1px solid #ced4da;
+
+        }
+
+
+
+        .card.red {
+
+            color: #e74c3c;
+
+        }
+
+
+
+        .card.black {
+
+            color: #212529;
+
+        }
+
+
+
+        .card:hover {
+
+            transform: scale(1.1);
+
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+
+        }
+
+
+
+        .selected-hand {
+
+            background-color: #3498db; /* Azul para cartas da mão */
+
+            color: white;
+
+        }
+
+
+
+        .selected-preflop {
+
+            background-color: #f56969; /* Vermelho para cartas do pre-flop */
+
+            color: white;
+
+        }
+
+
+
+        .selected-orange {
+
+            background-color: #f39c12; /* Laranja para carta adicional */
+
+            color: white;
+
+        }
+
+
+
+        .selected-purple {
+
+            background-color: #9b59b6; /* Roxo para última carta */
+
+            color: white;
+
+        }
+
+
+
+        .selection-group {
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            margin-top: 20px;
+
+            width: 100%;
+
+            max-width: 600px;
+
+        }
+
+
+
+        .card-spaces {
+
+            display: flex;
+
+            gap: 10px;
+
+            justify-content: center;
+
+            flex-wrap: wrap;
+
+            margin-top: 10px;
+
+        }
+
+
+
+        .card-space {
+
+            width: 60px;
+
+            height: 80px;
+
+            border: 2px dashed #adb5bd;
+
+            border-radius: 5px;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            font-size: 14px;
+
+            font-weight: bold;
+
+            color: #6c757d;
+
+            background-color: #f8f9fa;
+
+            transition: all 0.3s ease-in-out;
+
+        }
+
+
+
+        .footer {
+
+            text-align: center;
+
+            margin-top: 40px;
+
+            font-size: 14px;
+
+            color: #6c757d;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="selection-group">
+
+        <h2>Recomendações e Combinações</h2>
+
+        <div id="recommendation" style="margin: 15px 0; font-size: 16px; text-align: center; color: #343a40;">
+
+            Recomendações:
+
+        </div>
+
+        <div id="probabilities" style="font-size: 14px; text-align: center; color: #6c757d;">
+
+            <p>Combinações:</p>
+
+            <p>Análise do adversário: </p>
+
+        </div>
+
+    </div>
+
+
+
+    <div class="deck" id="deck"></div>
+
+
+
+  <script>
+
+Const suits = [‘♥’, ‘♦’, ‘♣’, ‘♠’];
+
+Const values = [‘2’, ‘3’, ‘4’, ‘5’, ‘6’, ‘7’, ‘8’, ‘9’, ‘10’, ‘J’, ‘Q’, ‘K’, ‘A’];
+
+
+
+Const deckElement = document.getElementById(‘deck’);
+
+Let handCards = [null, null];
+
+Let tableCards = [];
+
+
+
+Function createCard(value, suit) {
+
+    Const card = document.createElement(‘div’);
+
+    Card.className = `card ${suit === ‘♥’ || suit === ‘♦’ ? ‘red’ : ‘black’}`;
+
+    Card.textContent = `${value}${suit}`;
+
+    Card.addEventListener(‘click’, () => selectCard(card));
+
+    Return card;
+
+}
+
+
+
+Function selectCard(cardElement) {
+
+    Const cardText = cardElement.textContent;
+
+
+
+    If (handCards.includes(null) && !cardElement.classList.contains(‘selected-hand’) && !isAlreadySelected(cardElement)) {
+
+        Const index = handCards.indexOf(null);
+
+        handCards[index] = cardText;
+
+        cardElement.classList.add(‘selected-hand’);
+
+        updateGameState();
+
+    } else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
+
+        tableCards.push(cardText);
+
+        cardElement.classList.add(‘selected-preflop’);
+
+        updateGameState();
+
+    } else {
+
+        If (cardElement.classList.contains(‘selected-hand’)) {
+
+            Const index = handCards.indexOf(cardText);
+
+            handCards[index] = null;
+
+            cardElement.classList.remove(‘selected-hand’);
+
+            updateGameState();
+
+        } else if (cardElement.classList.contains(‘selected-preflop’)) {
+
+            tableCards = tableCards.filter(c => c !== cardText);
+
+            cardElement.classList.remove(‘selected-preflop’);
+
+            updateGameState();
+
+        }
+
+    }
+
+}
+
+
+
+Function isAlreadySelected(cardElement) {
+
+    Return cardElement.classList.contains(‘selected-hand’) ||
+
+           cardElement.classList.contains(‘selected-preflop’);
+
+}
+
+
+
+Function updateGameState() {
+
+    Const activeHand = handCards.filter(Boolean);
+
+    Const allCards = [...activeHand, ...tableCards];
+
+
+
+    If (activeHand.length < 2) {
+
+        Document.getElementById(‘recommendation’).textContent = “Selecione 2 cartas para a mão antes de obter recomendações.”;
+
+        Document.getElementById(‘probabilities’).textContent = “”;
+
+        Return;
+
+    }
+
+
+
+    Const combinations = evaluateHand(allCards);
+
+    Const recommendation = generateRecommendation(activeHand, tableCards);
+
+    Const opponentAnalysis = evaluateOpponent(allCards);
+
+
+
+    Document.getElementById(‘recommendation’).textContent = recommendation;
+
+    Document.getElementById(‘probabilities’).innerHTML = `
+
+        Combinações possíveis: ${combinations} <br>
+
+        ${opponentAnalysis}
+
+    `;
+
+}
+
+
+
+Function evaluateHand(cards) {
+
+    Const ranks = cards.map(card => card.slice(0, -1));
+
+    Const suits = cards.map(card => card.slice(-1));
+
+
+
+    Const rankCounts = {};
+
+    Ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+
+
+
+    Const suitCounts = {};
+
+    Suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+
+
+
+    Let combinations = [];
+
+
+
+    If (Object.values(rankCounts).includes(4)) combinations.push(“Quadra”);
+
+    If (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) combinations.push(“Full House”);
+
+    If (Object.values(suitCounts).some(count => count >= 5)) combinations.push(“Flush”);
+
+
+
+    Const rankIndices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a – b);
+
+    Let straightCount = 1;
+
+    For (let i = 1; i < rankIndices.length; i++) {
+
+        If (rankIndices[i] === rankIndices[i – 1] + 1) {
+
+            straightCount++;
+
+            if (straightCount >= 5) {
+
+                combinations.push(“Sequência”);
+
+                break;
+
+            }
+
+        } else {
+
+            straightCount = 1;
+
+        }
+
+    }
+
+
+
+    If (Object.values(rankCounts).filter(count => count === 2).length >= 2) combinations.push(“Dois Pares”);
+
+    If (Object.values(rankCounts).includes(3)) combinations.push(“Trinca”);
+
+    If (Object.values(rankCounts).includes(2)) combinations.push(“Par”);
+
+
+
+    Return combinations.length > 0 ? combinations.join(“, “) : “Nenhuma combinação relevante”;
+
+}
+
+
+
+Function generateRecommendation(hand, table) {
+
+    Const allCards = [...hand, ...table];
+
+    Const handStrength = evaluateHand(allCards);
+
+
+
+    If (handStrength.includes(“Quadra”) || handStrength.includes(“Full House”)) {
+
+        Return “Recomendação: Aposte tudo!”;
+
+    } else if (handStrength.includes(“Flush”) || handStrength.includes(“Sequência”)) {
+
+        Return “Recomendação: Aposte alto!”;
+
+    } else if (handStrength.includes(“Dois Pares”) || handStrength.includes(“Trinca”)) {
+
+        Return “Recomendação: Pagar a aposta.”;
+
+    } else {
+
+        Return “Recomendação: Jogue com cautela.”;
+
+    }
+
+}
+
+
+
+Function evaluateOpponent(allCards) {
+
+    Const deck = getDeck(allCards);
+
+    Let strongerHands = 0;
+
+
+
+    For (let i = 0; i < deck.length; i++) {
+
+        For (let j = i + 1; j < deck.length; j++) {
+
+            Const opponentHand = [deck[i], deck[j], ...tableCards];
+
+            Const opponentStrength = evaluateHand(opponentHand);
+
+
+
+            If (isStronger(opponentStrength, evaluateHand(allCards))) {
+
+                strongerHands++;
+
+            }
+
+        }
+
+    }
+
+
+
+    Const totalCombinations = (deck.length * (deck.length – 1)) / 2;
+
+    Const probability = ((strongerHands / totalCombinations) * 100).toFixed(2);
+
+
+
+    Return `Probabilidade do adversário ter uma mão mais forte: ${probability}%`;
+
+}
+
+
+
+Function getDeck(excludedCards) {
+
+    Const excluded = new Set(excludedCards);
+
+    Const deck = [];
+
+
+
+    Suits.forEach(suit => {
+
+        Values.forEach(value => {
+
+            Const card = `${value}${suit}`;
+
+            If (!excluded.has(card)) deck.push(card);
+
+        });
+
+    });
+
+
+
+    Return deck;
+
+}
+
+
+
+Function isStronger(opponentStrength, yourStrength) {
+
+    Const ranks = [“Par”, “Dois Pares”, “Trinca”, “Sequência”, “Flush”, “Full House”, “Quadra”];
+
+    Return ranks.indexOf(opponentStrength) > ranks.indexOf(yourStrength);
+
+}
+
+
+
+Suits.forEach(suit => {
+
+    Values.forEach(value => {
+
+        Const card = createCard(value, suit);
+
+        deckElement.appendChild(card);
+
+    });
+
+});
+
+</script>
+
+    
+
+</body>
+
+</html>
