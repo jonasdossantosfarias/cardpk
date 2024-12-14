@@ -144,30 +144,6 @@
             return "Carta Alta";
         }
 
-        function calculateOpponentProbabilities() {
-            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
-            let strongerHands = 0;
-            const totalHands = remainingDeck.length * (remainingDeck.length - 1) / 2;
-
-            for (let i = 0; i < remainingDeck.length; i++) {
-                for (let j = i + 1; j < remainingDeck.length; j++) {
-                    const opponentHand = [remainingDeck[i], remainingDeck[j], ...communityCards];
-                    const opponentStrength = evaluateHand(opponentHand);
-                    const yourStrength = evaluateHand([...playerHand, ...communityCards]);
-                    if (compareHands(opponentStrength, yourStrength) > 0) {
-                        strongerHands++;
-                    }
-                }
-            }
-
-            return ((strongerHands / totalHands) * 100).toFixed(2);
-        }
-
-        function compareHands(opponentStrength, yourStrength) {
-            const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            return ranking.indexOf(opponentStrength) - ranking.indexOf(yourStrength);
-        }
-
         function updateGameState() {
             if (playerHand.length < 2) {
                 recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
@@ -178,11 +154,10 @@
 
             const allCards = [...playerHand, ...communityCards];
             const handStrength = evaluateHand(allCards);
-            const opponentProbabilities = calculateOpponentProbabilities();
+            const handOnlyStrength = evaluateHand(playerHand);
 
-            recommendationElement.textContent = `Recomendação: Baseando-se na sua mão, a combinação é "${handStrength}".`;
-            probabilitiesElement.textContent = `Combinações possíveis com as cartas na mesa: ${handStrength}.`;
-            opponentAnalysisElement.textContent = `Probabilidade de o oponente ter uma mão mais forte: ${opponentProbabilities}%.`;
+            recommendationElement.textContent = `Recomendação: Sua mão base é "${handOnlyStrength}", força combinada: "${handStrength}".`;
+            probabilitiesElement.textContent = `Combinação da mesa com sua mão: ${handStrength}.`;
         }
 
         initializeDeck();
