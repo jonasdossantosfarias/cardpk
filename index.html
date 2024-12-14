@@ -205,7 +205,7 @@
 
         function getRecommendation(handStrength, opponentWinRate) {
             const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            if (opponentAggressive) opponentWinRate += 15;
+            if (opponentAggressive) opponentWinRate += 20; // Ajusta probabilidade para refletir agressividade do oponente
 
             if (strongHands.includes(handStrength) && opponentWinRate < 50) {
                 return "Recomendação: Aposte agressivamente (Raise ou All-in).";
