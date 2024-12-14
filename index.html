@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análise de Poker</title>
+    <title>Análise de Poker Inteligente</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,13 +67,27 @@
             background-color: #e67e22;
             color: white;
         }
+        button {
+            margin: 10px;
+            padding: 10px 15px;
+            font-size: 16px;
+            border: none;
+            background-color: #e67e22;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #d35400;
+        }
     </style>
 </head>
 <body>
-    <h2>Análise de Poker com Inteligência</h2>
+    <h2>Análise de Poker Inteligente</h2>
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
+    <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
     <script>
         const suits = ['♥', '♦', '♣', '♠'];
@@ -81,11 +95,18 @@
         let deck = [];
         let playerHand = [];
         let communityCards = [];
+        let opponentAggressive = false; // Indica se o oponente aumentou a aposta
 
         const deckElement = document.getElementById('deck');
         const recommendationElement = document.getElementById('recommendation');
         const probabilitiesElement = document.getElementById('probabilities');
         const opponentAnalysisElement = document.getElementById('opponent-analysis');
+        const opponentRaiseButton = document.getElementById('opponentRaiseButton');
+
+        opponentRaiseButton.addEventListener('click', () => {
+            opponentAggressive = true;
+            updateGameState();
+        });
 
         function initializeDeck() {
             suits.forEach(suit => {
@@ -147,7 +168,7 @@
         function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
             let opponentWins = 0, playerWins = 0, draws = 0;
-            const totalSimulations = 5000; // Número de simulações (Monte Carlo)
+            const totalSimulations = 5000;
 
             for (let i = 0; i < totalSimulations; i++) {
                 const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
@@ -176,6 +197,19 @@
             return ranking.indexOf(hand1) - ranking.indexOf(hand2);
         }
 
+        function getRecommendation(handStrength, opponentWinRate) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            if (opponentAggressive) opponentWinRate += 10; // Ajusta probabilidade para refletir agressividade do oponente
+
+            if (strongHands.includes(handStrength) && opponentWinRate < 50) {
+                return "Recomendação: Aposte agressivamente (Raise).";
+            }
+            if (opponentWinRate >= 50) {
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
+            }
+            return "Recomendação: Jogue com cautela (Call ou Check).";
+        }
+
         function updateGameState() {
             if (playerHand.length < 2) {
                 recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
@@ -196,17 +230,6 @@
                 Oponente vitória: ${opponentSimulations.opponentWinRate}%,
                 Você vitória: ${opponentSimulations.playerWinRate}%,
                 Empates: ${opponentSimulations.drawRate}%.`;
-        }
-
-        function getRecommendation(handStrength, opponentWinRate) {
-            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            if (strongHands.includes(handStrength) && opponentWinRate < 40) {
-                return "Recomendação: Aposte agressivamente (Raise).";
-            }
-            if (opponentWinRate >= 40) {
-                return "Recomendação: Cuidado! Considere desistir (Fold).";
-            }
-            return "Recomendação: Jogue com cautela (Call ou Check).";
         }
 
         initializeDeck();
