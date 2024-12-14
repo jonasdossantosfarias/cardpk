@@ -123,16 +123,22 @@
                 const cardElement = document.createElement('div');
                 cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
                 cardElement.textContent = card;
-                cardElement.addEventListener('click', () => selectCard(card, cardElement));
+                cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
                 deckElement.appendChild(cardElement);
             });
         }
 
-        function selectCard(card, cardElement) {
-            if (playerHand.length < 2 && !playerHand.includes(card)) {
+        function toggleCardSelection(card, cardElement) {
+            if (cardElement.classList.contains('selected-hand')) {
+                playerHand = playerHand.filter(c => c !== card);
+                cardElement.classList.remove('selected-hand');
+            } else if (cardElement.classList.contains('selected-community')) {
+                communityCards = communityCards.filter(c => c !== card);
+                cardElement.classList.remove('selected-community');
+            } else if (playerHand.length < 2) {
                 playerHand.push(card);
                 cardElement.classList.add('selected-hand');
-            } else if (communityCards.length < 5 && !communityCards.includes(card)) {
+            } else if (communityCards.length < 5) {
                 communityCards.push(card);
                 cardElement.classList.add('selected-community');
             }
@@ -199,10 +205,10 @@
 
         function getRecommendation(handStrength, opponentWinRate) {
             const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            if (opponentAggressive) opponentWinRate += 10; // Ajusta probabilidade para refletir agressividade do oponente
+            if (opponentAggressive) opponentWinRate += 15;
 
             if (strongHands.includes(handStrength) && opponentWinRate < 50) {
-                return "Recomendação: Aposte agressivamente (Raise).";
+                return "Recomendação: Aposte agressivamente (Raise ou All-in).";
             }
             if (opponentWinRate >= 50) {
                 return "Recomendação: Cuidado! Considere desistir (Fold).";
