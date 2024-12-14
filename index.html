@@ -221,8 +221,8 @@
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
     const deckElement = document.getElementById('deck');
-    let selectedCards = []; // As duas cartas da mão
-    let communityCards = []; // As cartas da mesa
+    let handCards = []; // Duas cartas da mão
+    let tableCards = []; // Cartas da mesa (as restantes)
 
     function createCard(value, suit) {
         const card = document.createElement('div');
@@ -235,67 +235,60 @@
     function selectCard(cardElement) {
         const cardText = cardElement.textContent;
 
-        // Selecionar as duas primeiras cartas da mão
-        if (selectedCards.length < 2 && !cardElement.classList.contains('selected') && !isAlreadySelected(cardElement)) {
-            cardElement.classList.add('selected');
-            selectedCards.push(cardText);
+        if (handCards.length < 2 && !cardElement.classList.contains('selected-hand')) {
+            cardElement.classList.add('selected-hand');
+            handCards.push(cardText);
             updateHand();
-        } 
-        // Selecionar as cartas comunitárias (até 5 no total)
-        else if (communityCards.length < 5 && !cardElement.classList.contains('selected-community') && !isAlreadySelected(cardElement)) {
-            cardElement.classList.add('selected-community');
-            communityCards.push(cardText);
-            updateCommunityCards();
-        } 
-        // Remover cartas
-        else {
-            if (cardElement.classList.contains('selected')) {
-                cardElement.classList.remove('selected');
-                selectedCards = selectedCards.filter(c => c !== cardText);
+        } else if (tableCards.length < 5 && !cardElement.classList.contains('selected-table') && !cardElement.classList.contains('selected-hand')) {
+            cardElement.classList.add('selected-table');
+            tableCards.push(cardText);
+            updateTable();
+        } else {
+            if (cardElement.classList.contains('selected-hand')) {
+                cardElement.classList.remove('selected-hand');
+                handCards = handCards.filter(c => c !== cardText);
                 updateHand();
-            } else if (cardElement.classList.contains('selected-community')) {
-                cardElement.classList.remove('selected-community');
-                communityCards = communityCards.filter(c => c !== cardText);
-                updateCommunityCards();
+            } else if (cardElement.classList.contains('selected-table')) {
+                cardElement.classList.remove('selected-table');
+                tableCards = tableCards.filter(c => c !== cardText);
+                updateTable();
             }
         }
     }
 
-    function isAlreadySelected(cardElement) {
-        return cardElement.classList.contains('selected') || cardElement.classList.contains('selected-community');
-    }
-
     function updateHand() {
-        document.getElementById('selectedCard1').textContent = selectedCards[0] || '1ª Carta';
-        document.getElementById('selectedCard2').textContent = selectedCards[1] || '2ª Carta';
+        document.getElementById('selectedCard1').textContent = handCards[0] || '1ª Carta';
+        document.getElementById('selectedCard2').textContent = handCards[1] || '2ª Carta';
 
-        analyzeGameState(selectedCards, communityCards);
+        // Reanalisa o estado do jogo baseado na mão e nas cartas da mesa
+        analyzeGameState([...handCards, ...tableCards]);
     }
 
-    function updateCommunityCards() {
-        document.getElementById('communityCard1').textContent = communityCards[0] || '1ª Mesa';
-        document.getElementById('communityCard2').textContent = communityCards[1] || '2ª Mesa';
-        document.getElementById('communityCard3').textContent = communityCards[2] || '3ª Mesa';
-        document.getElementById('communityCard4').textContent = communityCards[3] || '4ª Mesa';
-        document.getElementById('communityCard5').textContent = communityCards[4] || '5ª Mesa';
+    function updateTable() {
+        document.getElementById('extraCard1').textContent = tableCards[0] || '1ª Pre Flop';
+        document.getElementById('extraCard2').textContent = tableCards[1] || '2ª Pre Flop';
+        document.getElementById('extraCard3').textContent = tableCards[2] || '3ª Pre Flop';
+        document.getElementById('greenCard').textContent = tableCards[3] || 'Carta Adicional';
+        document.getElementById('purpleCard').textContent = tableCards[4] || 'Última Carta';
 
-        analyzeGameState(selectedCards, communityCards);
+        // Reanalisa o estado do jogo baseado na mão e nas cartas da mesa
+        analyzeGameState([...handCards, ...tableCards]);
     }
 
-    function analyzeGameState(hand, communityCards) {
-        const combinedCards = [...hand, ...communityCards];
-        const analysis = evaluateHand(combinedCards);
-        const recommendation = generateRecommendation(hand, communityCards);
+    function analyzeGameState(currentCards) {
+        const analysis = evaluateHand(handCards, tableCards);
+        const recommendation = generateRecommendation(handCards, tableCards);
 
         document.getElementById('recommendation').innerHTML = recommendation;
         document.getElementById('probabilities').innerHTML = analysis;
     }
 
-    function evaluateHand(allCards) {
-        if (allCards.length === 0) {
-            return "Selecione cartas para verificar as combinações possíveis.";
+    function evaluateHand(handCards, tableCards) {
+        if (handCards.length < 2) {
+            return "Selecione 2 cartas para a mão antes de analisar.";
         }
 
+        const allCards = [...handCards, ...tableCards];
         const valuesOnly = allCards.map(card => card.slice(0, -1));
         const suitsOnly = allCards.map(card => card.slice(-1));
 
@@ -355,22 +348,35 @@
             : "Nenhuma combinação relevante encontrada.";
     }
 
-    function generateRecommendation(hand, communityCards) {
-        if (hand.length < 2) {
-            return "Selecione pelo menos 2 cartas para receber uma recomendação.";
+    function generateRecommendation(handCards, tableCards) {
+        if (handCards.length < 2) {
+            return "Selecione 2 cartas para a mão antes de receber recomendações.";
         }
 
-        // Simples lógica para recomendação (pode ser melhorada com regras avançadas)
-        if (communityCards.length < 3) {
-            return "Recomendação: Aguarde as cartas da mesa.";
+        if (tableCards.length < 3) {
+            return "Recomendação: Aguarde mais cartas na mesa.";
         }
 
-        const randomChoice = Math.random();
-        if (randomChoice < 0.2) return "Recomendação: Desistir.";
-        if (randomChoice < 0.4) return "Recomendação: Pedir carta.";
-        if (randomChoice < 0.6) return "Recomendação: Pagar.";
-        if (randomChoice < 0.8) return "Recomendação: Aumentar a aposta.";
-        return "Recomendação: Apostar tudo.";
+        // Lógica básica de recomendação com base no estado das cartas
+        if (tableCards.length >= 3) {
+            const allCards = [...handCards, ...tableCards];
+            const valueCounts = {};
+            allCards.forEach(card => {
+                const value = card.slice(0, -1);
+                valueCounts[value] = (valueCounts[value] || 0) + 1;
+            });
+
+            const pairs = Object.values(valueCounts).filter(count => count === 2).length;
+            const threes = Object.values(valueCounts).filter(count => count === 3).length;
+
+            if (threes > 0 || pairs >= 2) {
+                return "Recomendação: Aposte alto.";
+            } else if (pairs === 1) {
+                return "Recomendação: Pagar a aposta.";
+            } else {
+                return "Recomendação: Cautela, pode desistir.";
+            }
+        }
     }
 
     suits.forEach(suit => {
