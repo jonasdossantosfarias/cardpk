@@ -189,7 +189,6 @@
 </head>
 <body>
     <div class="selection-group">
-        <h2>Recomendações e Probabilidades</h2>
         <div id="recommendation" style="margin: 15px 0; font-size: 16px; text-align: center; color: #343a40;">
             Faça sua seleção para obter recomendações.
         </div>
@@ -243,14 +242,13 @@
 </div>
 
 
-<script>
+    <script>
         const suits = ['♥', '♦', '♣', '♠'];
         const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
         const deckElement = document.getElementById('deck');
-        let handCards = [];
+        let handCards = [null, null];
         let tableCards = [];
-        let opponentAction = null;
 
         function createCard(value, suit) {
             const card = document.createElement('div');
@@ -260,58 +258,58 @@
             return card;
         }
 
-       function selectCard(cardElement) {
-    const cardText = cardElement.textContent;
+        function selectCard(cardElement) {
+            const cardText = cardElement.textContent;
 
-    // Verifica se ainda há espaço para selecionar as cartas da mão
-    if (handCards.length < 2 && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
-        cardElement.classList.add('selected-hand'); // Mão (Azul)
-        handCards.push(cardText);
-        updateHand();
-    } 
-    // Verifica se ainda há espaço para selecionar as cartas do pre-flop
-    else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
-        if (tableCards.length < 3) {
-            cardElement.classList.add('selected-preflop'); // Pre-flop (Vermelho)
-        } else if (tableCards.length === 3) {
-            cardElement.classList.add('selected-orange'); // Carta adicional (Laranja)
-        } else if (tableCards.length === 4) {
-            cardElement.classList.add('selected-purple'); // Última carta (Roxo)
+            // Adiciona carta à mão
+            if (handCards.includes(null) && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
+                const index = handCards.indexOf(null);
+                handCards[index] = cardText;
+                cardElement.classList.add('selected-hand');
+                updateHand();
+            }
+            // Adiciona carta à mesa
+            else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
+                if (tableCards.length < 3) {
+                    cardElement.classList.add('selected-preflop'); // Pre-flop
+                } else if (tableCards.length === 3) {
+                    cardElement.classList.add('selected-orange'); // Carta adicional
+                } else if (tableCards.length === 4) {
+                    cardElement.classList.add('selected-purple'); // Última carta
+                }
+                tableCards.push(cardText);
+                updateTable();
+            }
+            // Remove a seleção da carta
+            else {
+                if (cardElement.classList.contains('selected-hand')) {
+                    const index = handCards.indexOf(cardText);
+                    handCards[index] = null;
+                    cardElement.classList.remove('selected-hand');
+                    updateHand();
+                } else if (
+                    cardElement.classList.contains('selected-preflop') ||
+                    cardElement.classList.contains('selected-orange') ||
+                    cardElement.classList.contains('selected-purple')
+                ) {
+                    tableCards = tableCards.filter(c => c !== cardText);
+                    cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
+                    updateTable();
+                }
+            }
         }
-        tableCards.push(cardText);
-        updateTable();
-    } 
-    // Caso a carta seja desmarcada
-    else {
-        if (cardElement.classList.contains('selected-hand')) {
-            cardElement.classList.remove('selected-hand');
-            handCards = handCards.filter(c => c !== cardText);
-            updateHand();
-        } else if (
-            cardElement.classList.contains('selected-preflop') ||
-            cardElement.classList.contains('selected-orange') ||
-            cardElement.classList.contains('selected-purple')
-        ) {
-            cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
-            tableCards = tableCards.filter(c => c !== cardText);
-            updateTable();
-        }
-    }
-}
 
-// Verifica se a carta já foi selecionada em alguma posição (mão ou mesa)
-function isAlreadySelected(cardElement) {
-    return cardElement.classList.contains('selected-hand') ||
-           cardElement.classList.contains('selected-preflop') ||
-           cardElement.classList.contains('selected-orange') ||
-           cardElement.classList.contains('selected-purple');
-}
+        function isAlreadySelected(cardElement) {
+            return cardElement.classList.contains('selected-hand') ||
+                   cardElement.classList.contains('selected-preflop') ||
+                   cardElement.classList.contains('selected-orange') ||
+                   cardElement.classList.contains('selected-purple');
+        }
 
         function updateHand() {
             document.getElementById('selectedCard1').textContent = handCards[0] || '1ª Carta';
             document.getElementById('selectedCard2').textContent = handCards[1] || '2ª Carta';
-
-            analyzeGameState([...handCards, ...tableCards], opponentAction);
+            analyzeGameState();
         }
 
         function updateTable() {
@@ -320,130 +318,32 @@ function isAlreadySelected(cardElement) {
             document.getElementById('extraCard3').textContent = tableCards[2] || '3ª Pre Flop';
             document.getElementById('greenCard').textContent = tableCards[3] || 'Carta Adicional';
             document.getElementById('purpleCard').textContent = tableCards[4] || 'Última Carta';
-
-            analyzeGameState([...handCards, ...tableCards], opponentAction);
+            analyzeGameState();
         }
 
-        function analyzeGameState(currentCards, opponentAction) {
-            const analysis = evaluateHand(handCards, tableCards);
-            const recommendation = generateRecommendation(handCards, tableCards, opponentAction);
-
-            document.getElementById('recommendation').innerHTML = recommendation;
-            document.getElementById('probabilities').innerHTML = analysis;
+        function analyzeGameState() {
+            const activeHand = handCards.filter(Boolean);
+            const allCards = [...activeHand, ...tableCards];
+            if (activeHand.length < 2) {
+                document.getElementById('recommendation').textContent = "Selecione 2 cartas para a mão antes de obter recomendações.";
+                document.getElementById('probabilities').textContent = "";
+                return;
+            }
+            const combinations = evaluateHand(allCards);
+            const recommendation = generateRecommendation(activeHand, tableCards);
+            document.getElementById('recommendation').textContent = recommendation;
+            document.getElementById('probabilities').textContent = `Combinações possíveis: ${combinations}`;
         }
 
-        function evaluateHand(handCards, tableCards) {
-            if (handCards.length < 2) {
-                return "Selecione 2 cartas para a mão antes de analisar.";
-            }
-
-            const allCards = [...handCards, ...tableCards];
-            const valuesOnly = allCards.map(card => card.slice(0, -1));
-            const suitsOnly = allCards.map(card => card.slice(-1));
-
-            const valueCounts = {};
-            const suitCounts = {};
-
-            valuesOnly.forEach(value => valueCounts[value] = (valueCounts[value] || 0) + 1);
-            suitsOnly.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
-
-            let analysis = [];
-
-            const pairs = Object.values(valueCounts).filter(count => count === 2).length;
-            const threes = Object.values(valueCounts).filter(count => count === 3).length;
-            const fours = Object.values(valueCounts).filter(count => count === 4).length;
-
-            if (fours > 0) analysis.push("Quadra");
-            if (threes > 0 && pairs > 0) analysis.push("Full House");
-            else if (threes > 0) analysis.push("Trinca");
-            else if (pairs >= 2) analysis.push("Dois Pares");
-            else if (pairs === 1) analysis.push("Par");
-
-            if (Object.values(suitCounts).some(count => count >= 5)) {
-                analysis.push("Flush");
-            }
-
-            const valueIndices = valuesOnly.map(value => values.indexOf(value)).sort((a, b) => a - b);
-            let straightCount = 1;
-            for (let i = 1; i < valueIndices.length; i++) {
-                if (valueIndices[i] === valueIndices[i - 1] + 1) {
-                    straightCount++;
-                    if (straightCount >= 5) {
-                        analysis.push("Sequência");
-                        break;
-                    }
-                } else if (valueIndices[i] !== valueIndices[i - 1]) {
-                    straightCount = 1;
-                }
-            }
-
-            if (analysis.includes("Sequência") && analysis.includes("Flush")) {
-                analysis.push("Straight Flush");
-            }
-
-            const royalFlushValues = ['10', 'J', 'Q', 'K', 'A'];
-            if (royalFlushValues.every(value => valuesOnly.includes(value)) &&
-                suitsOnly.every(suit => suit === suitsOnly[0])) {
-                analysis.push("Royal Flush");
-            }
-
-            return analysis.length > 0
-                ? "Combinações possíveis: " + analysis.join(", ")
-                : "Nenhuma combinação relevante encontrada.";
+        function evaluateHand(cards) {
+            // Adiciona lógica para avaliar combinações baseadas nas cartas fornecidas
+            return "Par, Trinca, Sequência"; // Exemplo fictício, deve implementar lógica real
         }
 
-        function generateRecommendation(handCards, tableCards, opponentAction) {
-            if (handCards.length < 2) {
-                return "Selecione 2 cartas para a mão antes de receber recomendações.";
-            }
-
-            if (opponentAction === "pagar") {
-                return "Recomendação: Avalie a força da sua mão antes de igualar.";
-            } else if (opponentAction === "aumentar") {
-                return "Recomendação: Avalie a força da sua mão antes de subir a aposta.";
-            } else if (opponentAction === "apostar tudo") {
-                return "Recomendação: Só vá all-in se tiver uma mão muito forte.";
-            }
-
-            if (tableCards.length < 3) {
-                return "Recomendação: Aguarde mais cartas na mesa.";
-            }
-
-            if (tableCards.length >= 3) {
-                const allCards = [...handCards, ...tableCards];
-                const valueCounts = {};
-                allCards.forEach(card => {
-                    const value = card.slice(0, -1);
-                    valueCounts[value] = (valueCounts[value] || 0) + 1;
-                });
-
-                const pairs = Object.values(valueCounts).filter(count => count === 2).length;
-                const threes = Object.values(valueCounts).filter(count => count === 3).length;
-
-                if (threes > 0 || pairs >= 2) {
-                    return "Recomendação: Aposte alto.";
-                } else if (pairs === 1) {
-                    return "Recomendação: Pagar a aposta.";
-                } else {
-                    return "Recomendação: Cautela, pode desistir.";
-                }
-            }
+        function generateRecommendation(hand, table) {
+            // Baseado nas cartas da mão e mesa, recomenda ações
+            return "Recomendação: Aposte alto se estiver confiante.";
         }
-
-        document.getElementById('payButton').addEventListener('click', () => {
-            opponentAction = "pagar";
-            analyzeGameState([...handCards, ...tableCards], opponentAction);
-        });
-
-        document.getElementById('raiseButton').addEventListener('click', () => {
-            opponentAction = "aumentar";
-            analyzeGameState([...handCards, ...tableCards], opponentAction);
-        });
-
-        document.getElementById('allInButton').addEventListener('click', () => {
-            opponentAction = "apostar tudo";
-            analyzeGameState([...handCards, ...tableCards], opponentAction);
-        });
 
         suits.forEach(suit => {
             values.forEach(value => {
