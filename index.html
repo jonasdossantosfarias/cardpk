@@ -240,15 +240,14 @@
         <div class="card-space" id="purpleCard">Última Carta</div>
     </div>
 </div>
-
-
-    <script>
+ <script>
         const suits = ['♥', '♦', '♣', '♠'];
         const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
         const deckElement = document.getElementById('deck');
         let handCards = [null, null];
         let tableCards = [];
+        let opponentAction = null;
 
         function createCard(value, suit) {
             const card = document.createElement('div');
@@ -261,27 +260,22 @@
         function selectCard(cardElement) {
             const cardText = cardElement.textContent;
 
-            // Adiciona carta à mão
             if (handCards.includes(null) && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
                 const index = handCards.indexOf(null);
                 handCards[index] = cardText;
                 cardElement.classList.add('selected-hand');
                 updateHand();
-            }
-            // Adiciona carta à mesa
-            else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
+            } else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
                 if (tableCards.length < 3) {
-                    cardElement.classList.add('selected-preflop'); // Pre-flop
+                    cardElement.classList.add('selected-preflop');
                 } else if (tableCards.length === 3) {
-                    cardElement.classList.add('selected-orange'); // Carta adicional
+                    cardElement.classList.add('selected-orange');
                 } else if (tableCards.length === 4) {
-                    cardElement.classList.add('selected-purple'); // Última carta
+                    cardElement.classList.add('selected-purple');
                 }
                 tableCards.push(cardText);
                 updateTable();
-            }
-            // Remove a seleção da carta
-            else {
+            } else {
                 if (cardElement.classList.contains('selected-hand')) {
                     const index = handCards.indexOf(cardText);
                     handCards[index] = null;
@@ -330,20 +324,41 @@
                 return;
             }
             const combinations = evaluateHand(allCards);
-            const recommendation = generateRecommendation(activeHand, tableCards);
+            const recommendation = generateRecommendation(activeHand, tableCards, opponentAction);
             document.getElementById('recommendation').textContent = recommendation;
             document.getElementById('probabilities').textContent = `Combinações possíveis: ${combinations}`;
         }
 
         function evaluateHand(cards) {
-            // Adiciona lógica para avaliar combinações baseadas nas cartas fornecidas
-            return "Par, Trinca, Sequência"; // Exemplo fictício, deve implementar lógica real
+            // Lógica para avaliar combinações
+            return "Par, Trinca, Sequência"; // Exemplo fictício
         }
 
-        function generateRecommendation(hand, table) {
-            // Baseado nas cartas da mão e mesa, recomenda ações
-            return "Recomendação: Aposte alto se estiver confiante.";
+        function generateRecommendation(hand, table, action) {
+            if (action === "pagar") {
+                return "Recomendação: Avalie a força da sua mão antes de pagar.";
+            } else if (action === "aumentar") {
+                return "Recomendação: Avalie a força da sua mão antes de aumentar.";
+            } else if (action === "apostar tudo") {
+                return "Recomendação: Aposte tudo se sua mão for muito forte.";
+            }
+            return "Recomendação: Aguarde a próxima jogada.";
         }
+
+        document.getElementById('payButton').addEventListener('click', () => {
+            opponentAction = "pagar";
+            analyzeGameState();
+        });
+
+        document.getElementById('raiseButton').addEventListener('click', () => {
+            opponentAction = "aumentar";
+            analyzeGameState();
+        });
+
+        document.getElementById('allInButton').addEventListener('click', () => {
+            opponentAction = "apostar tudo";
+            analyzeGameState();
+        });
 
         suits.forEach(suit => {
             values.forEach(value => {
