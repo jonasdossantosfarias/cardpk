@@ -139,7 +139,25 @@
             font-size: 14px;
             color: #6c757d;
         }
-    
+
+            .action-button {
+        padding: 10px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background-color: #3498db;
+        color: white;
+        transition: background-color 0.3s;
+    }
+
+    .action-button:hover {
+        background-color: #2980b9;
+    }
+
+    .action-button:active {
+        background-color: #1c598a;
+    }
         @media (max-width: 768px) {
             h1 {
                 font-size: 1.8rem;
@@ -182,6 +200,15 @@
 
 <div class="deck" id="deck">
     <!-- Cartas serão inseridas dinamicamente aqui -->
+</div>
+
+    <div class="selection-group">
+    <h2>Ações do Adversário</h2>
+    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+        <button id="payButton" class="action-button">Pagar</button>
+        <button id="raiseButton" class="action-button">Aumentar</button>
+        <button id="allInButton" class="action-button">Apostar Tudo</button>
+    </div>
 </div>
 
 <div class="selection-group">
