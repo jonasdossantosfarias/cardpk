@@ -168,6 +168,23 @@
             return ranking.indexOf(opponentStrength) - ranking.indexOf(yourStrength);
         }
 
+        function getRecommendation(handStrength, opponentProbability) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            const mediumHands = ["Trinca", "Dois Pares"];
+            const weakHands = ["Par", "Carta Alta"];
+
+            if (strongHands.includes(handStrength) && opponentProbability < 40) {
+                return "Recomendação: Aposte agressivamente (Raise).";
+            }
+            if (mediumHands.includes(handStrength) && opponentProbability < 60) {
+                return "Recomendação: Continue no jogo (Call).";
+            }
+            if (weakHands.includes(handStrength) || opponentProbability >= 60) {
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
+            }
+            return "Recomendação: Analise a mesa com cautela.";
+        }
+
         function updateGameState() {
             if (playerHand.length < 2) {
                 recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
@@ -180,7 +197,9 @@
             const handStrength = evaluateHand(allCards);
             const opponentProbabilities = calculateOpponentProbabilities();
 
-            recommendationElement.textContent = `Recomendação: Baseando-se na sua mão e mesa, a combinação é "${handStrength}".`;
+            const recommendation = getRecommendation(handStrength, opponentProbabilities);
+
+            recommendationElement.textContent = recommendation;
             probabilitiesElement.textContent = `Combinação com sua mão: ${handStrength}.`;
             opponentAnalysisElement.textContent = `Probabilidade de oponente ter uma mão mais forte: ${opponentProbabilities}%.`;
         }
