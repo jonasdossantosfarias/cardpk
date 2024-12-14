@@ -296,49 +296,53 @@
 
   <script>
 
-Const suits = [‘♥’, ‘♦’, ‘♣’, ‘♠’];
+const suits = ['♥', '♦', '♣', '♠'];
 
-Const values = [‘2’, ‘3’, ‘4’, ‘5’, ‘6’, ‘7’, ‘8’, ‘9’, ‘10’, ‘J’, ‘Q’, ‘K’, ‘A’];
-
-
-
-Const deckElement = document.getElementById(‘deck’);
-
-Let handCards = [null, null];
-
-Let tableCards = [];
+const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
 
 
-Function createCard(value, suit) {
+const deckElement = document.getElementById('deck');
 
-    Const card = document.createElement(‘div’);
+let handCards = [null, null];
 
-    Card.className = `card ${suit === ‘♥’ || suit === ‘♦’ ? ‘red’ : ‘black’}`;
+let tableCards = [];
 
-    Card.textContent = `${value}${suit}`;
 
-    Card.addEventListener(‘click’, () => selectCard(card));
 
-    Return card;
+// Criação de cada carta no baralho
+
+function createCard(value, suit) {
+
+    const card = document.createElement('div');
+
+    card.className = `card ${suit === '♥' || suit === '♦' ? 'red' : 'black'}`;
+
+    card.textContent = `${value}${suit}`;
+
+    card.addEventListener('click', () => selectCard(card));
+
+    return card;
 
 }
 
 
 
-Function selectCard(cardElement) {
+// Função para seleção de cartas (mão e mesa)
 
-    Const cardText = cardElement.textContent;
+function selectCard(cardElement) {
+
+    const cardText = cardElement.textContent;
 
 
 
-    If (handCards.includes(null) && !cardElement.classList.contains(‘selected-hand’) && !isAlreadySelected(cardElement)) {
+    if (handCards.includes(null) && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
 
-        Const index = handCards.indexOf(null);
+        const index = handCards.indexOf(null);
 
         handCards[index] = cardText;
 
-        cardElement.classList.add(‘selected-hand’);
+        cardElement.classList.add('selected-hand');
 
         updateGameState();
 
@@ -346,27 +350,27 @@ Function selectCard(cardElement) {
 
         tableCards.push(cardText);
 
-        cardElement.classList.add(‘selected-preflop’);
+        cardElement.classList.add('selected-preflop');
 
         updateGameState();
 
     } else {
 
-        If (cardElement.classList.contains(‘selected-hand’)) {
+        if (cardElement.classList.contains('selected-hand')) {
 
-            Const index = handCards.indexOf(cardText);
+            const index = handCards.indexOf(cardText);
 
             handCards[index] = null;
 
-            cardElement.classList.remove(‘selected-hand’);
+            cardElement.classList.remove('selected-hand');
 
             updateGameState();
 
-        } else if (cardElement.classList.contains(‘selected-preflop’)) {
+        } else if (cardElement.classList.contains('selected-preflop')) {
 
             tableCards = tableCards.filter(c => c !== cardText);
 
-            cardElement.classList.remove(‘selected-preflop’);
+            cardElement.classList.remove('selected-preflop');
 
             updateGameState();
 
@@ -378,47 +382,51 @@ Function selectCard(cardElement) {
 
 
 
-Function isAlreadySelected(cardElement) {
+// Verifica se a carta já foi selecionada
 
-    Return cardElement.classList.contains(‘selected-hand’) ||
+function isAlreadySelected(cardElement) {
 
-           cardElement.classList.contains(‘selected-preflop’);
+    return cardElement.classList.contains('selected-hand') ||
+
+           cardElement.classList.contains('selected-preflop');
 
 }
 
 
 
-Function updateGameState() {
+// Atualiza o estado do jogo
 
-    Const activeHand = handCards.filter(Boolean);
+function updateGameState() {
 
-    Const allCards = [...activeHand, ...tableCards];
+    const activeHand = handCards.filter(Boolean);
+
+    const allCards = [...activeHand, ...tableCards];
 
 
 
-    If (activeHand.length < 2) {
+    if (activeHand.length < 2) {
 
-        Document.getElementById(‘recommendation’).textContent = “Selecione 2 cartas para a mão antes de obter recomendações.”;
+        document.getElementById('recommendation').textContent = "Selecione 2 cartas para a mão antes de obter recomendações.";
 
-        Document.getElementById(‘probabilities’).textContent = “”;
+        document.getElementById('probabilities').textContent = "";
 
-        Return;
+        return;
 
     }
 
 
 
-    Const combinations = evaluateHand(allCards);
+    const combinations = evaluateHand(allCards);
 
-    Const recommendation = generateRecommendation(activeHand, tableCards);
+    const recommendation = generateRecommendation(activeHand, tableCards);
 
-    Const opponentAnalysis = evaluateOpponent(allCards);
+    const opponentAnalysis = evaluateOpponent(allCards);
 
 
 
-    Document.getElementById(‘recommendation’).textContent = recommendation;
+    document.getElementById('recommendation').textContent = recommendation;
 
-    Document.getElementById(‘probabilities’).innerHTML = `
+    document.getElementById('probabilities').innerHTML = `
 
         Combinações possíveis: ${combinations} <br>
 
@@ -430,51 +438,53 @@ Function updateGameState() {
 
 
 
-Function evaluateHand(cards) {
+// Avalia as combinações da mão
 
-    Const ranks = cards.map(card => card.slice(0, -1));
+function evaluateHand(cards) {
 
-    Const suits = cards.map(card => card.slice(-1));
+    const ranks = cards.map(card => card.slice(0, -1));
 
-
-
-    Const rankCounts = {};
-
-    Ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+    const suits = cards.map(card => card.slice(-1));
 
 
 
-    Const suitCounts = {};
+    const rankCounts = {};
 
-    Suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
-
-
-
-    Let combinations = [];
+    ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
 
 
 
-    If (Object.values(rankCounts).includes(4)) combinations.push(“Quadra”);
+    const suitCounts = {};
 
-    If (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) combinations.push(“Full House”);
-
-    If (Object.values(suitCounts).some(count => count >= 5)) combinations.push(“Flush”);
+    suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
 
 
 
-    Const rankIndices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a – b);
+    let combinations = [];
 
-    Let straightCount = 1;
 
-    For (let i = 1; i < rankIndices.length; i++) {
 
-        If (rankIndices[i] === rankIndices[i – 1] + 1) {
+    if (Object.values(rankCounts).includes(4)) combinations.push("Quadra");
+
+    if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) combinations.push("Full House");
+
+    if (Object.values(suitCounts).some(count => count >= 5)) combinations.push("Flush");
+
+
+
+    const rankIndices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
+
+    let straightCount = 1;
+
+    for (let i = 1; i < rankIndices.length; i++) {
+
+        if (rankIndices[i] === rankIndices[i - 1] + 1) {
 
             straightCount++;
 
             if (straightCount >= 5) {
 
-                combinations.push(“Sequência”);
+                combinations.push("Sequência");
 
                 break;
 
@@ -490,43 +500,45 @@ Function evaluateHand(cards) {
 
 
 
-    If (Object.values(rankCounts).filter(count => count === 2).length >= 2) combinations.push(“Dois Pares”);
+    if (Object.values(rankCounts).filter(count => count === 2).length >= 2) combinations.push("Dois Pares");
 
-    If (Object.values(rankCounts).includes(3)) combinations.push(“Trinca”);
+    if (Object.values(rankCounts).includes(3)) combinations.push("Trinca");
 
-    If (Object.values(rankCounts).includes(2)) combinations.push(“Par”);
+    if (Object.values(rankCounts).includes(2)) combinations.push("Par");
 
 
 
-    Return combinations.length > 0 ? combinations.join(“, “) : “Nenhuma combinação relevante”;
+    return combinations.length > 0 ? combinations.join(", ") : "Nenhuma combinação relevante";
 
 }
 
 
 
-Function generateRecommendation(hand, table) {
+// Gera a recomendação baseada na mão e no tabuleiro
 
-    Const allCards = [...hand, ...table];
+function generateRecommendation(hand, table) {
 
-    Const handStrength = evaluateHand(allCards);
+    const allCards = [...hand, ...table];
+
+    const handStrength = evaluateHand(allCards);
 
 
 
-    If (handStrength.includes(“Quadra”) || handStrength.includes(“Full House”)) {
+    if (handStrength.includes("Quadra") || handStrength.includes("Full House")) {
 
-        Return “Recomendação: Aposte tudo!”;
+        return "Recomendação: Aposte tudo!";
 
-    } else if (handStrength.includes(“Flush”) || handStrength.includes(“Sequência”)) {
+    } else if (handStrength.includes("Flush") || handStrength.includes("Sequência")) {
 
-        Return “Recomendação: Aposte alto!”;
+        return "Recomendação: Aposte alto!";
 
-    } else if (handStrength.includes(“Dois Pares”) || handStrength.includes(“Trinca”)) {
+    } else if (handStrength.includes("Dois Pares") || handStrength.includes("Trinca")) {
 
-        Return “Recomendação: Pagar a aposta.”;
+        return "Recomendação: Pagar a aposta.";
 
     } else {
 
-        Return “Recomendação: Jogue com cautela.”;
+        return "Recomendação: Jogue com cautela.";
 
     }
 
@@ -534,25 +546,27 @@ Function generateRecommendation(hand, table) {
 
 
 
-Function evaluateOpponent(allCards) {
+// Avalia as chances do adversário
 
-    Const deck = getDeck(allCards);
+function evaluateOpponent(allCards) {
 
-    Let strongerHands = 0;
+    const deck = getDeck(allCards);
 
-
-
-    For (let i = 0; i < deck.length; i++) {
-
-        For (let j = i + 1; j < deck.length; j++) {
-
-            Const opponentHand = [deck[i], deck[j], ...tableCards];
-
-            Const opponentStrength = evaluateHand(opponentHand);
+    let strongerHands = 0;
 
 
 
-            If (isStronger(opponentStrength, evaluateHand(allCards))) {
+    for (let i = 0; i < deck.length; i++) {
+
+        for (let j = i + 1; j < deck.length; j++) {
+
+            const opponentHand = [deck[i], deck[j], ...tableCards];
+
+            const opponentStrength = evaluateHand(opponentHand);
+
+
+
+            if (isStronger(opponentStrength, evaluateHand(allCards))) {
 
                 strongerHands++;
 
@@ -564,33 +578,35 @@ Function evaluateOpponent(allCards) {
 
 
 
-    Const totalCombinations = (deck.length * (deck.length – 1)) / 2;
+    const totalCombinations = (deck.length * (deck.length - 1)) / 2;
 
-    Const probability = ((strongerHands / totalCombinations) * 100).toFixed(2);
+    const probability = ((strongerHands / totalCombinations) * 100).toFixed(2);
 
 
 
-    Return `Probabilidade do adversário ter uma mão mais forte: ${probability}%`;
+    return `Probabilidade do adversário ter uma mão mais forte: ${probability}%`;
 
 }
 
 
 
-Function getDeck(excludedCards) {
+// Cria o baralho excluindo cartas já selecionadas
 
-    Const excluded = new Set(excludedCards);
+function getDeck(excludedCards) {
 
-    Const deck = [];
+    const excluded = new Set(excludedCards);
+
+    const deck = [];
 
 
 
-    Suits.forEach(suit => {
+    suits.forEach(suit => {
 
-        Values.forEach(value => {
+        values.forEach(value => {
 
-            Const card = `${value}${suit}`;
+            const card = `${value}${suit}`;
 
-            If (!excluded.has(card)) deck.push(card);
+            if (!excluded.has(card)) deck.push(card);
 
         });
 
@@ -598,27 +614,31 @@ Function getDeck(excludedCards) {
 
 
 
-    Return deck;
+    return deck;
 
 }
 
 
 
-Function isStronger(opponentStrength, yourStrength) {
+// Compara a força das mãos
 
-    Const ranks = [“Par”, “Dois Pares”, “Trinca”, “Sequência”, “Flush”, “Full House”, “Quadra”];
+function isStronger(opponentStrength, yourStrength) {
 
-    Return ranks.indexOf(opponentStrength) > ranks.indexOf(yourStrength);
+    const ranks = ["Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra"];
+
+    return ranks.indexOf(opponentStrength) > ranks.indexOf(yourStrength);
 
 }
 
 
 
-Suits.forEach(suit => {
+// Gera o baralho na interface
 
-    Values.forEach(value => {
+suits.forEach(suit => {
 
-        Const card = createCard(value, suit);
+    values.forEach(value => {
+
+        const card = createCard(value, suit);
 
         deckElement.appendChild(card);
 
@@ -633,3 +653,4 @@ Suits.forEach(suit => {
 </body>
 
 </html>
+
