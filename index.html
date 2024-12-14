@@ -215,6 +215,7 @@
         }
         const combinations = evaluateHand(allCards);
         const recommendation = generateRecommendation(activeHand, tableCards);
+        const opponentAnalysis = evaluateOpponent(allCards);
         document.getElementById('recommendation').textContent = recommendation;
         document.getElementById('probabilities').textContent = `Combinações possíveis: ${combinations}`;
     }
@@ -270,6 +271,80 @@
         } else {
             return "Recomendação: Jogue com cautela.";
         }
+    }
+
+        function evaluateOpponent(allCards) {
+
+        // Simula possíveis mãos do adversário
+
+        const deck = getDeck(allCards);
+
+        let strongerHands = 0;
+
+
+
+        for (let i = 0; i < deck.length; i++) {
+
+            for (let j = i + 1; j < deck.length; j++) {
+
+                const opponentHand = [deck[i], deck[j], ...tableCards];
+
+                const opponentStrength = evaluateHand(opponentHand);
+                
+
+
+                // Verifica se a mão do adversário é mais forte
+
+                if (isStronger(opponentStrength, evaluateHand(allCards))) {
+
+                    strongerHands++;
+
+                }
+
+            }
+
+        }
+
+        const probability = ((strongerHands / (deck.length * (deck.length - 1) / 2)) * 100).toFixed(2);
+
+        return `Probabilidade do adversário ter uma mão mais forte: ${probability}%`;
+
+    }
+
+
+
+    function getDeck(excludedCards) {
+
+        // Gera o baralho excluindo as cartas já selecionadas
+
+        const excluded = new Set(excludedCards);
+
+        const deck = [];
+
+        suits.forEach(suit => {
+
+            values.forEach(value => {
+
+                const card = `${value}${suit}`;
+
+                if (!excluded.has(card)) deck.push(card);
+
+            });
+
+        });
+
+        return deck;
+
+    }
+
+    function isStronger(opponentStrength, yourStrength) {
+
+        // Comparação simplificada de força da mão
+
+        const ranks = ["Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra"];
+
+        return ranks.indexOf(opponentStrength) > ranks.indexOf(yourStrength);
+
     }
 
     suits.forEach(suit => {
