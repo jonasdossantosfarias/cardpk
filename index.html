@@ -179,138 +179,139 @@
     </div>
 
     <script>
-        const suits = ['♥', '♦', '♣', '♠'];
-        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    const suits = ['♥', '♦', '♣', '♠'];
+    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-        const deckElement = document.getElementById('deck');
-        let handCards = [null, null];
-        let tableCards = [];
+    const deckElement = document.getElementById('deck');
+    let handCards = [null, null];
+    let tableCards = [];
 
-        function createCard(value, suit) {
-            const card = document.createElement('div');
-            card.className = `card ${suit === '♥' || suit === '♦' ? 'red' : 'black'}`;
-            card.textContent = `${value}${suit}`;
-            card.addEventListener('click', () => selectCard(card));
-            return card;
-        }
+    function createCard(value, suit) {
+        const card = document.createElement('div');
+        card.className = `card ${suit === '♥' || suit === '♦' ? 'red' : 'black'}`;
+        card.textContent = `${value}${suit}`;
+        card.addEventListener('click', () => selectCard(card));
+        return card;
+    }
 
-        function selectCard(cardElement) {
-            const cardText = cardElement.textContent;
+    function selectCard(cardElement) {
+        const cardText = cardElement.textContent;
 
-            if (handCards.includes(null) && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
-                const index = handCards.indexOf(null);
-                handCards[index] = cardText;
-                cardElement.classList.add('selected-hand');
+        if (handCards.includes(null) && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
+            const index = handCards.indexOf(null);
+            handCards[index] = cardText;
+            cardElement.classList.add('selected-hand');
+            updateGameState();
+        } else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
+            if (tableCards.length < 3) {
+                cardElement.classList.add('selected-preflop');
+            } else if (tableCards.length === 3) {
+                cardElement.classList.add('selected-orange');
+            } else if (tableCards.length === 4) {
+                cardElement.classList.add('selected-purple');
+            }
+            tableCards.push(cardText);
+            updateGameState();
+        } else {
+            if (cardElement.classList.contains('selected-hand')) {
+                const index = handCards.indexOf(cardText);
+                handCards[index] = null;
+                cardElement.classList.remove('selected-hand');
                 updateGameState();
-            } else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
-                if (tableCards.length < 3) {
-                    cardElement.classList.add('selected-preflop');
-                } else if (tableCards.length === 3) {
-                    cardElement.classList.add('selected-orange');
-                } else if (tableCards.length === 4) {
-                    cardElement.classList.add('selected-purple');
-                }
-                tableCards.push(cardText);
+            } else if (
+                cardElement.classList.contains('selected-preflop') ||
+                cardElement.classList.contains('selected-orange') ||
+                cardElement.classList.contains('selected-purple')
+            ) {
+                tableCards = tableCards.filter(c => c !== cardText);
+                cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
                 updateGameState();
-            } else {
-                if (cardElement.classList.contains('selected-hand')) {
-                    const index = handCards.indexOf(cardText);
-                    handCards[index] = null;
-                    cardElement.classList.remove('selected-hand');
-                    updateGameState();
-                } else if (
-                    cardElement.classList.contains('selected-preflop') ||
-                    cardElement.classList.contains('selected-orange') ||
-                    cardElement.classList.contains('selected-purple')
-                ) {
-                    tableCards = tableCards.filter(c => c !== cardText);
-                    cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
-                    updateGameState();
+            }
+        }
+    }
+
+    function isAlreadySelected(cardElement) {
+        return cardElement.classList.contains('selected-hand') ||
+               cardElement.classList.contains('selected-preflop') ||
+               cardElement.classList.contains('selected-orange') ||
+               cardElement.classList.contains('selected-purple');
+    }
+
+    function updateGameState() {
+        const activeHand = handCards.filter(Boolean);
+        const allCards = [...activeHand, ...tableCards];
+        if (activeHand.length < 2) {
+            document.getElementById('recommendation').textContent = "Selecione 2 cartas para a mão antes de obter recomendações.";
+            document.getElementById('probabilities').textContent = "";
+            return;
+        }
+        const combinations = evaluateHand(allCards);
+        const recommendation = generateRecommendation(activeHand, tableCards);
+        document.getElementById('recommendation').textContent = recommendation;
+        document.getElementById('probabilities').textContent = `Combinações possíveis: ${combinations}`;
+    }
+
+    function evaluateHand(cards) {
+        const ranks = cards.map(card => card.slice(0, -1));
+        const suits = cards.map(card => card.slice(-1));
+
+        const rankCounts = {};
+        ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+
+        const suitCounts = {};
+        suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+
+        let combinations = [];
+
+        if (Object.values(rankCounts).includes(4)) combinations.push("Quadra");
+        if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) combinations.push("Full House");
+        if (Object.values(suitCounts).some(count => count >= 5)) combinations.push("Flush");
+
+        const rankIndices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
+        let straightCount = 1;
+        for (let i = 1; i < rankIndices.length; i++) {
+            if (rankIndices[i] === rankIndices[i - 1] + 1) {
+                straightCount++;
+                if (straightCount >= 5) {
+                    combinations.push("Sequência");
+                    break;
                 }
-            }
-        }
-
-        function isAlreadySelected(cardElement) {
-            return cardElement.classList.contains('selected-hand') ||
-                   cardElement.classList.contains('selected-preflop') ||
-                   cardElement.classList.contains('selected-orange') ||
-                   cardElement.classList.contains('selected-purple');
-        }
-
-        function updateGameState() {
-            const activeHand = handCards.filter(Boolean);
-            const allCards = [...activeHand, ...tableCards];
-            if (activeHand.length < 2) {
-                document.getElementById('recommendation').textContent = "Selecione 2 cartas para a mão antes de obter recomendações.";
-                document.getElementById('probabilities').textContent = "";
-                return;
-            }
-            const combinations = evaluateHand(allCards);
-            const recommendation = generateRecommendation(activeHand, tableCards);
-            document.getElementById('recommendation').textContent = recommendation;
-            document.getElementById('probabilities').textContent = `Combinações possíveis: ${combinations}`;
-        }
-
-        function evaluateHand(cards) {
-            // Verifica combinações como par, dois pares, trinca, sequência, etc.
-            const ranks = cards.map(card => card.slice(0, -1));
-            const suits = cards.map(card => card.slice(-1));
-
-            const rankCounts = {};
-            ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
-
-            const suitCounts = {};
-            suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
-
-            let combinations = [];
-
-            if (Object.values(rankCounts).includes(4)) combinations.push("Quadra");
-            if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) combinations.push("Full House");
-            if (Object.values(suitCounts).some(count => count >= 5)) combinations.push("Flush");
-
-            const rankIndices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
-            let straightCount = 1;
-            for (let i = 1; i < rankIndices.length; i++) {
-                if (rankIndices[i] === rankIndices[i - 1] + 1) {
-                    straightCount++;
-                    if (straightCount >= 5) {
-                        combinations.push("Sequência");
-                        break;
-                    }
-                } else {
-                    straightCount = 1;
-                }
-            }
-
-            if (Object.values(rankCounts).filter(count => count === 2).length >= 2) combinations.push("Dois Pares");
-            if (Object.values(rankCounts).includes(3)) combinations.push("Trinca");
-            if (Object.values(rankCounts).includes(2)) combinations.push("Par");
-
-            return combinations.length > 0 ? combinations.join(", ") : "Nenhuma combinação relevante";
-        }
-
-        function generateRecommendation(hand, table) {
-            const allCards = [...hand, ...table];
-            if (hand.length < 2) return "Selecione suas cartas para a mão antes de obter uma recomendação.";
-
-            const handStrength = evaluateHand(allCards);
-            if (handStrength.includes("Quadra") || handStrength.includes("Full House")) {
-                return "Recomendação: Aposte tudo!";
-            } else if (handStrength.includes("Flush") || handStrength.includes("Sequência")) {
-                return "Recomendação: Aposte alto!";
-            } else if (handStrength.includes("Dois Pares") || handStrength.includes("Trinca")) {
-                return "Recomendação: Pagar a aposta.";
             } else {
-                return "Recomendação: Jogue com cautela.";
+                straightCount = 1;
             }
         }
 
-        suits.forEach(suit => {
-            values.forEach(value => {
-                const card = createCard(value, suit);
-                deckElement.appendChild(card);
-            });
+        if (Object.values(rankCounts).filter(count => count === 2).length >= 2) combinations.push("Dois Pares");
+        if (Object.values(rankCounts).includes(3)) combinations.push("Trinca");
+        if (Object.values(rankCounts).includes(2)) combinations.push("Par");
+
+        return combinations.length > 0 ? combinations.join(", ") : "Nenhuma combinação relevante";
+    }
+
+    function generateRecommendation(hand, table) {
+        const allCards = [...hand, ...table];
+        if (hand.length < 2) return "Selecione suas cartas para a mão antes de obter uma recomendação.";
+
+        const handStrength = evaluateHand(allCards);
+        if (handStrength.includes("Quadra") || handStrength.includes("Full House")) {
+            return "Recomendação: Aposte tudo!";
+        } else if (handStrength.includes("Flush") || handStrength.includes("Sequência")) {
+            return "Recomendação: Aposte alto!";
+        } else if (handStrength.includes("Dois Pares") || handStrength.includes("Trinca")) {
+            return "Recomendação: Pagar a aposta.";
+        } else {
+            return "Recomendação: Jogue com cautela.";
+        }
+    }
+
+    suits.forEach(suit => {
+        values.forEach(value => {
+            const card = createCard(value, suit);
+            deckElement.appendChild(card);
         });
+    });
     </script>
+
+    
 </body>
 </html>
