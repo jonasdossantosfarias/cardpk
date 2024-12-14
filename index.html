@@ -71,8 +71,8 @@
 </head>
 <body>
     <h2>Análise de Poker</h2>
-    <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;"></div>
-    <div id="probabilities" style="font-size: 14px; color: #6c757d;"></div>
+    <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
+    <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div class="deck" id="deck"></div>
     <script>
         const suits = ['♥', '♦', '♣', '♠'];
@@ -143,15 +143,17 @@
         }
 
         function updateGameState() {
-            if (playerHand.length === 2 && communityCards.length >= 3) {
-                const allCards = [...playerHand, ...communityCards];
-                const handStrength = evaluateHand(allCards);
-                recommendationElement.textContent = `Mão: ${handStrength}`;
-                probabilitiesElement.textContent = "Probabilidades em cálculo...";
-            } else {
-                recommendationElement.textContent = "Selecione 2 cartas para a mão e ao menos 3 comunitárias.";
+            if (playerHand.length < 2) {
+                recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
                 probabilitiesElement.textContent = "";
+                return;
             }
+
+            const allCards = [...playerHand, ...communityCards];
+            const handStrength = evaluateHand(allCards);
+
+            recommendationElement.textContent = `Recomendação: Baseando-se na sua mão, a combinação é "${handStrength}"`;
+            probabilitiesElement.textContent = `Combinações possíveis com as cartas na mesa: ${handStrength}`;
         }
 
         initializeDeck();
