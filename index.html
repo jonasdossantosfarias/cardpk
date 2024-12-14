@@ -3,51 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Selecione as Cartas do Baralho</title>
+    <title>Análise de Poker</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
-            color: #212529;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+            color: #333;
         }
-    
-        h1 {
-            font-size: 2rem;
-            color: #343a40;
-            margin-top: 20px;
+
+        h1, h2 {
+            text-align: center;
+            color: #2c3e50;
         }
-    
-        h2 {
-            font-size: 1.5rem;
-            color: #495057;
-            margin: 20px 0 10px 0;
-        }
-    
+
         .deck {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             justify-content: center;
-            padding: 10px;
-            background: #ffffff;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             margin-top: 20px;
         }
-    
+
         .card {
             width: 50px;
             height: 70px;
             border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -55,64 +37,50 @@
             font-size: 14px;
             cursor: pointer;
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            background-color: #ffffff;
+            background-color: white;
             border: 1px solid #ced4da;
         }
-    
-        .card.red {
-            color: #e74c3c;
-        }
-    
-        .card.black {
-            color: #212529;
-        }
-    
+
         .card:hover {
             transform: scale(1.1);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
-    
-        .selected {
-            background-color: #007bff;
+
+        .selected-hand {
+            background-color: #3498db; /* Azul */
             color: white;
-            border-color: #0056b3;
         }
-    
+
+        .selected-table {
+            background-color: #e74c3c; /* Vermelho */
+            color: white;
+        }
+
         .selected-orange {
-            background-color: #fd7e14;
+            background-color: #f39c12; /* Laranja */
             color: white;
-            border-color: #e36b0d;
         }
-    
-        .selected-green {
-            background-color: #28a745;
-            color: white;
-            border-color: #1e7e34;
-        }
-    
+
         .selected-purple {
-            background-color: #6f42c1;
+            background-color: #9b59b6; /* Roxo */
             color: white;
-            border-color: #59369c;
         }
-    
+
         .selection-group {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin-top: 20px;
-            width: 100%;
-            max-width: 600px;
         }
-    
+
         .card-spaces {
             display: flex;
             gap: 10px;
             justify-content: center;
             flex-wrap: wrap;
-            margin-top: 10px;
+            margin-top: 15px;
         }
-    
+
         .card-space {
             width: 60px;
             height: 80px;
@@ -127,291 +95,280 @@
             background-color: #f8f9fa;
             transition: all 0.3s ease-in-out;
         }
-    
-        .card-space:hover {
-            border-color: #495057;
-            background-color: #e9ecef;
+
+        .action-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            transition: background-color 0.3s;
         }
-    
+
+        .action-button:hover {
+            background-color: #2980b9;
+        }
+
+        .action-button:active {
+            background-color: #1c598a;
+        }
+
         .footer {
             text-align: center;
             margin-top: 40px;
             font-size: 14px;
             color: #6c757d;
         }
-    
-     .action-button {
-        padding: 10px 20px;
-        font-size: 16px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        background-color: #3498db;
-        color: white;
-        transition: background-color 0.3s;
-    }
-
-    .action-button:hover {
-        background-color: #2980b9;
-    }
-
-    .action-button:active {
-        background-color: #1c598a;
-    }
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-    
-            h2 {
-                font-size: 1.2rem;
-            }
-    
-            .card {
-                width: 40px;
-                height: 60px;
-                font-size: 12px;
-            }
-    
-            .card-space {
-                width: 50px;
-                height: 70px;
-                font-size: 12px;
-            }
-    
-            .deck {
-                padding: 5px;
-            }
-        }
-    </style>    
+    </style>
 </head>
 <body>
-    <h1>Selecione Cartas do Baralho</h1>
+    <h1>Análise de Poker</h1>
+
+    <div class="deck" id="deck">
+        <!-- Cartas serão inseridas dinamicamente aqui -->
+    </div>
 
     <div class="selection-group">
+        <h2>MÃO</h2>
+        <div class="card-spaces">
+            <div class="card-space" id="selectedCard1">1ª Carta</div>
+            <div class="card-space" id="selectedCard2">2ª Carta</div>
+        </div>
+    </div>
+
+    <div class="selection-group">
+        <h2>Selecione 3 Pre Flop</h2>
+        <div class="card-spaces">
+            <div class="card-space" id="extraCard1">1ª Pre Flop</div>
+            <div class="card-space" id="extraCard2">2ª Pre Flop</div>
+            <div class="card-space" id="extraCard3">3ª Pre Flop</div>
+        </div>
+    </div>
+
+    <div class="selection-group">
+        <h2>Carta Adicional</h2>
+        <div class="card-spaces">
+            <div class="card-space" id="greenCard">Carta Adicional</div>
+        </div>
+    </div>
+
+    <div class="selection-group">
+        <h2>Última Carta</h2>
+        <div class="card-spaces">
+            <div class="card-space" id="purpleCard">Última Carta</div>
+        </div>
+    </div>
+
+    <div class="selection-group">
+        <h2>Ações do Adversário</h2>
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+            <button id="payButton" class="action-button">Pagar</button>
+            <button id="raiseButton" class="action-button">Aumentar</button>
+            <button id="allInButton" class="action-button">Apostar Tudo</button>
+        </div>
+    </div>
+
+    <div class="selection-group">
+        <h2>Recomendações e Combinações</h2>
         <div id="recommendation" style="margin: 15px 0; font-size: 16px; text-align: center; color: #343a40;">
             Faça sua seleção para obter recomendações.
         </div>
         <div id="probabilities" style="font-size: 14px; text-align: center; color: #6c757d;">
-            <p>Probabilidades aparecerão aqui.</p>
+            <p>Combinações aparecerão aqui.</p>
         </div>
     </div>
 
-<div class="deck" id="deck">
-    <!-- Cartas serão inseridas dinamicamente aqui -->
-</div>
-
-    <div class="selection-group">
-    <h2>Ações do Adversário</h2>
-    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-        <button id="payButton" class="action-button">Pagar</button>
-        <button id="raiseButton" class="action-button">Aumentar</button>
-        <button id="allInButton" class="action-button">Apostar Tudo</button>
+    <div class="footer">
+        Desenvolvido para jogos e aprendizado de poker. © 2024
     </div>
-</div>
 
-<div class="selection-group">
-    <h2>MÃO</h2>
-    <div class="card-spaces">
-        <div class="card-space" id="selectedCard1">1ª Carta</div>
-        <div class="card-space" id="selectedCard2">2ª Carta</div>
-    </div>
-</div>
+    <script>
+        const suits = ['♥', '♦', '♣', '♠'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-<div class="selection-group">
-    <h2>Selecione 3 Pre Flop</h2>
-    <div class="card-spaces">
-        <div class="card-space" id="extraCard1">1ª Pre Flop</div>
-        <div class="card-space" id="extraCard2">2ª Pre Flop</div>
-        <div class="card-space" id="extraCard3">3ª Pre Flop</div>
-    </div>
-</div>
+        const deckElement = document.getElementById('deck');
+        let handCards = [];
+        let tableCards = [];
+        let opponentAction = null;
 
-<div class="selection-group">
-    <h2>Carta Adicional</h2>
-    <div class="card-spaces">
-        <div class="card-space" id="greenCard">Carta Adicional</div>
-    </div>
-</div>
+        function createCard(value, suit) {
+            const card = document.createElement('div');
+            card.className = `card ${suit === '♥' || suit === '♦' ? 'red' : 'black'}`;
+            card.textContent = `${value}${suit}`;
+            card.addEventListener('click', () => selectCard(card));
+            return card;
+        }
 
-<div class="selection-group">
-    <h2>Última Carta</h2>
-    <div class="card-spaces">
-        <div class="card-space" id="purpleCard">Última Carta</div>
-    </div>
-</div>
+        function selectCard(cardElement) {
+            const cardText = cardElement.textContent;
 
-
-<script>
-    const suits = ['♥', '♦', '♣', '♠'];
-    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-
-    const deckElement = document.getElementById('deck');
-    let handCards = []; // Duas cartas da mão
-    let tableCards = []; // Cartas da mesa (as restantes)
-
-    function createCard(value, suit) {
-        const card = document.createElement('div');
-        card.className = `card ${suit === '♥' || suit === '♦' ? 'red' : 'black'}`;
-        card.textContent = `${value}${suit}`;
-        card.addEventListener('click', () => selectCard(card));
-        return card;
-    }
-
-    function selectCard(cardElement) {
-        const cardText = cardElement.textContent;
-
-        if (handCards.length < 2 && !cardElement.classList.contains('selected-hand')) {
-            cardElement.classList.add('selected-hand');
-            handCards.push(cardText);
-            updateHand();
-        } else if (tableCards.length < 5 && !cardElement.classList.contains('selected-table') && !cardElement.classList.contains('selected-hand')) {
-            cardElement.classList.add('selected-table');
-            tableCards.push(cardText);
-            updateTable();
-        } else {
-            if (cardElement.classList.contains('selected-hand')) {
-                cardElement.classList.remove('selected-hand');
-                handCards = handCards.filter(c => c !== cardText);
+            if (handCards.length < 2 && !cardElement.classList.contains('selected-hand')) {
+                cardElement.classList.add('selected-hand');
+                handCards.push(cardText);
                 updateHand();
-            } else if (cardElement.classList.contains('selected-table')) {
-                cardElement.classList.remove('selected-table');
-                tableCards = tableCards.filter(c => c !== cardText);
+            } else if (tableCards.length < 5 && !cardElement.classList.contains('selected-table') && !cardElement.classList.contains('selected-hand')) {
+                cardElement.classList.add('selected-table');
+                tableCards.push(cardText);
                 updateTable();
-            }
-        }
-    }
-
-    function updateHand() {
-        document.getElementById('selectedCard1').textContent = handCards[0] || '1ª Carta';
-        document.getElementById('selectedCard2').textContent = handCards[1] || '2ª Carta';
-
-        // Reanalisa o estado do jogo baseado na mão e nas cartas da mesa
-        analyzeGameState([...handCards, ...tableCards]);
-    }
-
-    function updateTable() {
-        document.getElementById('extraCard1').textContent = tableCards[0] || '1ª Pre Flop';
-        document.getElementById('extraCard2').textContent = tableCards[1] || '2ª Pre Flop';
-        document.getElementById('extraCard3').textContent = tableCards[2] || '3ª Pre Flop';
-        document.getElementById('greenCard').textContent = tableCards[3] || 'Carta Adicional';
-        document.getElementById('purpleCard').textContent = tableCards[4] || 'Última Carta';
-
-        // Reanalisa o estado do jogo baseado na mão e nas cartas da mesa
-        analyzeGameState([...handCards, ...tableCards]);
-    }
-
-    function analyzeGameState(currentCards) {
-        const analysis = evaluateHand(handCards, tableCards);
-        const recommendation = generateRecommendation(handCards, tableCards);
-
-        document.getElementById('recommendation').innerHTML = recommendation;
-        document.getElementById('probabilities').innerHTML = analysis;
-    }
-
-    function evaluateHand(handCards, tableCards) {
-        if (handCards.length < 2) {
-            return "Selecione 2 cartas para a mão antes de analisar.";
-        }
-
-        const allCards = [...handCards, ...tableCards];
-        const valuesOnly = allCards.map(card => card.slice(0, -1));
-        const suitsOnly = allCards.map(card => card.slice(-1));
-
-        const valueCounts = {};
-        const suitCounts = {};
-
-        valuesOnly.forEach(value => valueCounts[value] = (valueCounts[value] || 0) + 1);
-        suitsOnly.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
-
-        let analysis = [];
-
-        // Par, Dois Pares, Trinca
-        const pairs = Object.values(valueCounts).filter(count => count === 2).length;
-        const threes = Object.values(valueCounts).filter(count => count === 3).length;
-        const fours = Object.values(valueCounts).filter(count => count === 4).length;
-
-        if (fours > 0) analysis.push("Quadra");
-        if (threes > 0 && pairs > 0) analysis.push("Full House");
-        else if (threes > 0) analysis.push("Trinca");
-        else if (pairs >= 2) analysis.push("Dois Pares");
-        else if (pairs === 1) analysis.push("Par");
-
-        // Flush
-        if (Object.values(suitCounts).some(count => count >= 5)) {
-            analysis.push("Flush");
-        }
-
-        // Straight
-        const valueIndices = valuesOnly.map(value => values.indexOf(value)).sort((a, b) => a - b);
-        let straightCount = 1;
-        for (let i = 1; i < valueIndices.length; i++) {
-            if (valueIndices[i] === valueIndices[i - 1] + 1) {
-                straightCount++;
-                if (straightCount >= 5) {
-                    analysis.push("Sequência");
-                    break;
+            } else {
+                if (cardElement.classList.contains('selected-hand')) {
+                    cardElement.classList.remove('selected-hand');
+                    handCards = handCards.filter(c => c !== cardText);
+                    updateHand();
+                } else if (cardElement.classList.contains('selected-table')) {
+                    cardElement.classList.remove('selected-table');
+                    tableCards = tableCards.filter(c => c !== cardText);
+                    updateTable();
                 }
-            } else if (valueIndices[i] !== valueIndices[i - 1]) {
-                straightCount = 1;
             }
         }
 
-        // Straight Flush
-        if (analysis.includes("Sequência") && analysis.includes("Flush")) {
-            analysis.push("Straight Flush");
+        function updateHand() {
+            document.getElementById('selectedCard1').textContent = handCards[0] || '1ª Carta';
+            document.getElementById('selectedCard2').textContent = handCards[1] || '2ª Carta';
+
+            analyzeGameState([...handCards, ...tableCards], opponentAction);
         }
 
-        // Royal Flush
-        const royalFlushValues = ['10', 'J', 'Q', 'K', 'A'];
-        if (royalFlushValues.every(value => valuesOnly.includes(value)) &&
-            suitsOnly.every(suit => suit === suitsOnly[0])) {
-            analysis.push("Royal Flush");
+        function updateTable() {
+            document.getElementById('extraCard1').textContent = tableCards[0] || '1ª Pre Flop';
+            document.getElementById('extraCard2').textContent = tableCards[1] || '2ª Pre Flop';
+            document.getElementById('extraCard3').textContent = tableCards[2] || '3ª Pre Flop';
+            document.getElementById('greenCard').textContent = tableCards[3] || 'Carta Adicional';
+            document.getElementById('purpleCard').textContent = tableCards[4] || 'Última Carta';
+
+            analyzeGameState([...handCards, ...tableCards], opponentAction);
         }
 
-        return analysis.length > 0
-            ? "Combinações possíveis: " + analysis.join(", ")
-            : "Nenhuma combinação relevante encontrada.";
-    }
+        function analyzeGameState(currentCards, opponentAction) {
+            const analysis = evaluateHand(handCards, tableCards);
+            const recommendation = generateRecommendation(handCards, tableCards, opponentAction);
 
-    function generateRecommendation(handCards, tableCards) {
-        if (handCards.length < 2) {
-            return "Selecione 2 cartas para a mão antes de receber recomendações.";
+            document.getElementById('recommendation').innerHTML = recommendation;
+            document.getElementById('probabilities').innerHTML = analysis;
         }
 
-        if (tableCards.length < 3) {
-            return "Recomendação: Aguarde mais cartas na mesa.";
-        }
+        function evaluateHand(handCards, tableCards) {
+            if (handCards.length < 2) {
+                return "Selecione 2 cartas para a mão antes de analisar.";
+            }
 
-        // Lógica básica de recomendação com base no estado das cartas
-        if (tableCards.length >= 3) {
             const allCards = [...handCards, ...tableCards];
+            const valuesOnly = allCards.map(card => card.slice(0, -1));
+            const suitsOnly = allCards.map(card => card.slice(-1));
+
             const valueCounts = {};
-            allCards.forEach(card => {
-                const value = card.slice(0, -1);
-                valueCounts[value] = (valueCounts[value] || 0) + 1;
-            });
+            const suitCounts = {};
+
+            valuesOnly.forEach(value => valueCounts[value] = (valueCounts[value] || 0) + 1);
+            suitsOnly.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+
+            let analysis = [];
 
             const pairs = Object.values(valueCounts).filter(count => count === 2).length;
             const threes = Object.values(valueCounts).filter(count => count === 3).length;
+            const fours = Object.values(valueCounts).filter(count => count === 4).length;
 
-            if (threes > 0 || pairs >= 2) {
-                return "Recomendação: Aposte alto.";
-            } else if (pairs === 1) {
-                return "Recomendação: Pagar a aposta.";
-            } else {
-                return "Recomendação: Cautela, pode desistir.";
+            if (fours > 0) analysis.push("Quadra");
+            if (threes > 0 && pairs > 0) analysis.push("Full House");
+            else if (threes > 0) analysis.push("Trinca");
+            else if (pairs >= 2) analysis.push("Dois Pares");
+            else if (pairs === 1) analysis.push("Par");
+
+            if (Object.values(suitCounts).some(count => count >= 5)) {
+                analysis.push("Flush");
+            }
+
+            const valueIndices = valuesOnly.map(value => values.indexOf(value)).sort((a, b) => a - b);
+            let straightCount = 1;
+            for (let i = 1; i < valueIndices.length; i++) {
+                if (valueIndices[i] === valueIndices[i - 1] + 1) {
+                    straightCount++;
+                    if (straightCount >= 5) {
+                        analysis.push("Sequência");
+                        break;
+                    }
+                } else if (valueIndices[i] !== valueIndices[i - 1]) {
+                    straightCount = 1;
+                }
+            }
+
+            if (analysis.includes("Sequência") && analysis.includes("Flush")) {
+                analysis.push("Straight Flush");
+            }
+
+            const royalFlushValues = ['10', 'J', 'Q', 'K', 'A'];
+            if (royalFlushValues.every(value => valuesOnly.includes(value)) &&
+                suitsOnly.every(suit => suit === suitsOnly[0])) {
+                analysis.push("Royal Flush");
+            }
+
+            return analysis.length > 0
+                ? "Combinações possíveis: " + analysis.join(", ")
+                : "Nenhuma combinação relevante encontrada.";
+        }
+
+        function generateRecommendation(handCards, tableCards, opponentAction) {
+            if (handCards.length < 2) {
+                return "Selecione 2 cartas para a mão antes de receber recomendações.";
+            }
+
+            if (opponentAction === "pagar") {
+                return "Recomendação: Avalie a força da sua mão antes de igualar.";
+            } else if (opponentAction === "aumentar") {
+                return "Recomendação: Avalie a força da sua mão antes de subir a aposta.";
+            } else if (opponentAction === "apostar tudo") {
+                return "Recomendação: Só vá all-in se tiver uma mão muito forte.";
+            }
+
+            if (tableCards.length < 3) {
+                return "Recomendação: Aguarde mais cartas na mesa.";
+            }
+
+            if (tableCards.length >= 3) {
+                const allCards = [...handCards, ...tableCards];
+                const valueCounts = {};
+                allCards.forEach(card => {
+                    const value = card.slice(0, -1);
+                    valueCounts[value] = (valueCounts[value] || 0) + 1;
+                });
+
+                const pairs = Object.values(valueCounts).filter(count => count === 2).length;
+                const threes = Object.values(valueCounts).filter(count => count === 3).length;
+
+                if (threes > 0 || pairs >= 2) {
+                    return "Recomendação: Aposte alto.";
+                } else if (pairs === 1) {
+                    return "Recomendação: Pagar a aposta.";
+                } else {
+                    return "Recomendação: Cautela, pode desistir.";
+                }
             }
         }
-    }
 
-    suits.forEach(suit => {
-        values.forEach(value => {
-            const card = createCard(value, suit);
-            deckElement.appendChild(card);
+        document.getElementById('payButton').addEventListener('click', () => {
+            opponentAction = "pagar";
+            analyzeGameState([...handCards, ...tableCards], opponentAction);
         });
-    });
-</script>
 
+        document.getElementById('raiseButton').addEventListener('click', () => {
+            opponentAction = "aumentar";
+            analyzeGameState([...handCards, ...tableCards], opponentAction);
+        });
+
+        document.getElementById('allInButton').addEventListener('click', () => {
+            opponentAction = "apostar tudo";
+            analyzeGameState([...handCards, ...tableCards], opponentAction);
+        });
+
+        suits.forEach(suit => {
+            values.forEach(value => {
+                const card = createCard(value, suit);
+                deckElement.appendChild(card);
+            });
+        });
+    </script>
 </body>
 </html>
