@@ -78,23 +78,25 @@
             border-color: #0056b3;
         }
     
-        .selected-orange {
-            background-color: #fd7e14;
-            color: white;
-            border-color: #e36b0d;
-        }
-    
-        .selected-green {
-            background-color: #28a745;
-            color: white;
-            border-color: #1e7e34;
-        }
-    
-        .selected-purple {
-            background-color: #6f42c1;
-            color: white;
-            border-color: #59369c;
-        }
+       .selected-hand {
+    background-color: #3498db; /* Azul para cartas da mão */
+    color: white;
+}
+
+.selected-preflop {
+    background-color: #e74c3c; /* Vermelho para cartas do pre-flop */
+    color: white;
+}
+
+.selected-orange {
+    background-color: #f39c12; /* Laranja para carta adicional */
+    color: white;
+}
+
+.selected-purple {
+    background-color: #9b59b6; /* Roxo para última carta */
+    color: white;
+}
     
         .selection-group {
             display: flex;
@@ -258,44 +260,52 @@
             return card;
         }
 
-        function selectCard(cardElement) {
-            const cardText = cardElement.textContent;
-        
-            // Mão (duas primeiras cartas selecionadas)
-            if (handCards.length < 2 && !cardElement.classList.contains('selected-hand')) {
-                cardElement.classList.add('selected-hand'); // Azul
-                handCards.push(cardText);
-                updateHand();
-            }
-            // Pre-flop (três primeiras cartas na mesa)
-            else if (tableCards.length < 5 && !cardElement.classList.contains('selected-preflop') && !cardElement.classList.contains('selected-hand')) {
-                if (tableCards.length < 3) {
-                    cardElement.classList.add('selected-preflop'); // Vermelho
-                } else if (tableCards.length === 3) {
-                    cardElement.classList.add('selected-orange'); // Carta adicional: Laranja
-                } else if (tableCards.length === 4) {
-                    cardElement.classList.add('selected-purple'); // Última carta: Roxa
-                }
-                tableCards.push(cardText);
-                updateTable();
-            }
-            // Remoção de cartas
-            else {
-                if (cardElement.classList.contains('selected-hand')) {
-                    cardElement.classList.remove('selected-hand');
-                    handCards = handCards.filter(c => c !== cardText);
-                    updateHand();
-                } else if (
-                    cardElement.classList.contains('selected-preflop') ||
-                    cardElement.classList.contains('selected-orange') ||
-                    cardElement.classList.contains('selected-purple')
-                ) {
-                    cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
-                    tableCards = tableCards.filter(c => c !== cardText);
-                    updateTable();
-                }
-            }
+       function selectCard(cardElement) {
+    const cardText = cardElement.textContent;
+
+    // Verifica se ainda há espaço para selecionar as cartas da mão
+    if (handCards.length < 2 && !cardElement.classList.contains('selected-hand') && !isAlreadySelected(cardElement)) {
+        cardElement.classList.add('selected-hand'); // Mão (Azul)
+        handCards.push(cardText);
+        updateHand();
+    } 
+    // Verifica se ainda há espaço para selecionar as cartas do pre-flop
+    else if (tableCards.length < 5 && !isAlreadySelected(cardElement)) {
+        if (tableCards.length < 3) {
+            cardElement.classList.add('selected-preflop'); // Pre-flop (Vermelho)
+        } else if (tableCards.length === 3) {
+            cardElement.classList.add('selected-orange'); // Carta adicional (Laranja)
+        } else if (tableCards.length === 4) {
+            cardElement.classList.add('selected-purple'); // Última carta (Roxo)
         }
+        tableCards.push(cardText);
+        updateTable();
+    } 
+    // Caso a carta seja desmarcada
+    else {
+        if (cardElement.classList.contains('selected-hand')) {
+            cardElement.classList.remove('selected-hand');
+            handCards = handCards.filter(c => c !== cardText);
+            updateHand();
+        } else if (
+            cardElement.classList.contains('selected-preflop') ||
+            cardElement.classList.contains('selected-orange') ||
+            cardElement.classList.contains('selected-purple')
+        ) {
+            cardElement.classList.remove('selected-preflop', 'selected-orange', 'selected-purple');
+            tableCards = tableCards.filter(c => c !== cardText);
+            updateTable();
+        }
+    }
+}
+
+// Verifica se a carta já foi selecionada em alguma posição (mão ou mesa)
+function isAlreadySelected(cardElement) {
+    return cardElement.classList.contains('selected-hand') ||
+           cardElement.classList.contains('selected-preflop') ||
+           cardElement.classList.contains('selected-orange') ||
+           cardElement.classList.contains('selected-purple');
+}
 
         function updateHand() {
             document.getElementById('selectedCard1').textContent = handCards[0] || '1ª Carta';
