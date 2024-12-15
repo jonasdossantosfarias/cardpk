@@ -107,13 +107,14 @@
         let playerHand = [];
         let communityCards = [];
         let opponentAggressive = false;
-    
+
         const deckElement = document.getElementById('deck');
         const recommendationElement = document.getElementById('recommendation');
         const probabilitiesElement = document.getElementById('probabilities');
         const opponentAnalysisElement = document.getElementById('opponent-analysis');
         const opponentRaiseButton = document.getElementById('opponentRaiseButton');
-       const oddsTable = {
+
+        const oddsTable = {
             "pocketPair": { "trinca": 12.7, "quadra": 0.24 },
             "flushDraw": { "flush": 19.1 },
             "oesd": { "straight": 32 },
@@ -145,7 +146,7 @@
             });
         }
     
-              function toggleCardSelection(card, cardElement) {
+         function toggleCardSelection(card, cardElement) {
             if (cardElement.classList.contains('selected-hand')) {
                 playerHand = playerHand.filter(c => c !== card);
                 cardElement.classList.remove('selected-hand');
@@ -195,10 +196,14 @@
             ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
             suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
     
-            const isFlush = Object.values(suitCounts).some(count => count >= 5);
-            const sortedRanks = ranks.map(rank => isNaN(rank) ? (rank === 'A' ? 14 : 'JQK'.indexOf(rank) + 11) : parseInt(rank)).sort((a, b) => a - b);
-            const isStraight = sortedRanks.some((rank, index, arr) => index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i) => val === arr[index] + i));
-    
+           const isFlush = Object.values(suitCounts).some(count => count >= 5);
+            const sortedRanks = [...new Set(ranks.map(rank => {
+                if (rank === 'A') return 14;
+                if ('JQK'.includes(rank)) return 'JQK'.indexOf(rank) + 11;
+                return parseInt(rank);
+            })).sort((a, b) => a - b)];
+            const isStraight = sortedRanks.some((rank, index, arr) => index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i) => val === rank + i));
+            
             if (isFlush && isStraight) return "Straight Flush";
             if (Object.values(rankCounts).includes(4)) return "Quadra";
             if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
@@ -296,12 +301,9 @@
                 probabilities.playerWinRate
             );
     
-            recommendationElement.textContent = `Recomendação: Analise as odds para ${handStrength}.`;
-            probabilitiesElement.textContent = `Probabilidades estimadas: ${odds}.`;
-            opponentAnalysisElement.textContent = `
-                Oponente vitória: ${probabilities.opponentWinRate}%,
-                Você vitória: ${probabilities.playerWinRate}%,
-                Empates: ${probabilities.drawRate}%.`;
+            recommendationElement.textContent = `Recomendação: Jogue ${handStrength} com base em sua força.`;
+            probabilitiesElement.textContent = `Probabilidades: ${JSON.stringify(oddsTable[handStrength.toLowerCase()] || "Sem dados específicos.")}`;
+            opponentAnalysisElement.textContent = `Oponente agressivo: ${opponentAggressive ? "Sim" : "Não"}`;
         }
     
         initializeDeck();
