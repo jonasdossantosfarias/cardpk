@@ -368,8 +368,10 @@ function updateGameState() {
             currentPhase === 'turn' ? 'Turn' :
             'River'
         }<br>`;
-        
-        document.getElementById('recommendation').innerHTML = phaseInfo + recommendation;
+
+         document.getElementById('recommendation').innerText = probabilities.recommendation;
+         document.getElementById('probabilities').innerText = `Probabilidade de vitória: ${(probabilities.winProbability * 100).toFixed(1)}%`;
+            updateCardCount();
         document.getElementById('probabilities').innerHTML = 
             `Mão: ${playerHand.join(', ')}<br>` +
             `Comunitárias: ${communityCards.join(', ')}<br>` +
