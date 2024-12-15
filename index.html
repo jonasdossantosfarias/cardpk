@@ -105,7 +105,10 @@
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
     <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
+    
    <script>
+    import { PokerProbability } from './probabilityCalculator.js';
+       
     const suits = ['♥', '♦', '♣', '♠'];
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     let deck = [];
@@ -272,9 +275,12 @@
         const handStrength = evaluateHand(allCards);
         const opponentPossibleHands = simulateOpponentHands(numOpponents);
         const probabilities = calculateWinningProbability(opponentPossibleHands);
+        const handStrength = PokerProbability.calculateHandStrength(playerHand, communityCards);
+        const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
+        const probabilities = PokerProbability.simulateScenarios(playerHand, communityCards, remainingDeck, numOpponents);
 
-        recommendationElement.textContent = getRecommendation(handStrength, probabilities.opponentWinRate, probabilities.playerWinRate);
-        probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
+        recommendationElement.textContent = `Recomendação: ${PokerProbability.getRecommendation(handStrength, probabilities.opponentWinRate, probabilities.playerWinRate)}`;
+        probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}`;
         opponentAnalysisElement.textContent = `
             Oponente vitória: ${probabilities.opponentWinRate}%,
             Você vitória: ${probabilities.playerWinRate}%,
