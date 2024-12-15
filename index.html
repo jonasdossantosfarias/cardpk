@@ -89,7 +89,6 @@
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
-    <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
 
     <!-- Oponentes -->
     <div class="opponent-container">
@@ -119,9 +118,7 @@
         const opponentActionsContainer = document.getElementById('opponent-actions');
 
         document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                updateOpponentActions();
-            });
+            checkbox.addEventListener('change', updateOpponentActions);
         });
 
         function initializeDeck() {
@@ -182,17 +179,11 @@
 
         function opponentAction(opponentId, action) {
             if (action === "Desistir") {
-                alert(`${opponentId.toUpperCase()} desistiu.`);
                 delete opponents[opponentId];
             } else {
                 alert(`${opponentId.toUpperCase()} escolheu ${action}.`);
             }
             updateGameState();
-        }
-
-        function simulateOpponentHands(opponentHand) {
-            const allCards = [...communityCards, ...opponentHand];
-            return evaluateHand(allCards);
         }
 
         function evaluateHand(cards) {
@@ -230,15 +221,21 @@
             }
 
             const playerBest = evaluateHand([...playerHand, ...communityCards]);
-            let opponentAnalysis = "Análises dos adversários: <br>";
+            let opponentAnalysis = "Análises dos adversários:<br>";
 
             Object.keys(opponents).forEach(opponentId => {
-                const opponentBest = simulateOpponentHands(opponents[opponentId]);
+                const opponentBest = evaluateHand([...communityCards, ...generateOpponentHand()]);
                 opponentAnalysis += `${opponentId.toUpperCase()}: ${opponentBest}<br>`;
             });
 
-            recommendationElement.textContent = `Sua mão: ${playerBest}`;
+            recommendationElement.textContent = `Sua melhor combinação: ${playerBest}`;
+            probabilitiesElement.textContent = `Cartas comunitárias: ${communityCards.join(', ')}`;
             opponentAnalysisElement.innerHTML = opponentAnalysis;
+        }
+
+        function generateOpponentHand() {
+            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
+            return remainingDeck.slice(0, 2);
         }
 
         initializeDeck();
