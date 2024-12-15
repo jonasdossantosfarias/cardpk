@@ -105,10 +105,7 @@
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
     <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
-    
    <script>
-    import { PokerProbability } from './probabilityCalculator.js';
-       
     const suits = ['♥', '♦', '♣', '♠'];
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
     let deck = [];
@@ -131,7 +128,7 @@
     function initializeDeck() {
         suits.forEach(suit => {
             values.forEach(value => {
-                deck.push(`${value}${suit}`);
+                deck.push(${value}${suit});
             });
         });
         renderDeck();
@@ -141,7 +138,7 @@
         deckElement.innerHTML = '';
         deck.forEach(card => {
             const cardElement = document.createElement('div');
-            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            cardElement.className = card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'};
             cardElement.textContent = card;
             cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
             deckElement.appendChild(cardElement);
@@ -154,7 +151,7 @@
             cardElement.classList.remove('selected-hand');
         } else if (communityCards.includes(card)) {
             communityCards = communityCards.filter(c => c !== card);
-            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            cardElement.className = card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'};
         } else if (playerHand.length < 2) {
             playerHand.push(card);
             cardElement.classList.add('selected-hand');
@@ -163,7 +160,7 @@
             let colorClass = communityCards.length <= 3 ? 'selected-community pre-flop' : 
                             (communityCards.length === 4 ? 'selected-community turn' : 
                             'selected-community river');
-            cardElement.className = `card ${colorClass}`;
+            cardElement.className = card ${colorClass};
         }
         updateGameState();
     }
@@ -275,16 +272,13 @@
         const handStrength = evaluateHand(allCards);
         const opponentPossibleHands = simulateOpponentHands(numOpponents);
         const probabilities = calculateWinningProbability(opponentPossibleHands);
-        const handStrength = PokerProbability.calculateHandStrength(playerHand, communityCards);
-        const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
-        const probabilities = PokerProbability.simulateScenarios(playerHand, communityCards, remainingDeck, numOpponents);
 
-        recommendationElement.textContent = `Recomendação: ${PokerProbability.getRecommendation(handStrength, probabilities.opponentWinRate, probabilities.playerWinRate)}`;
-        probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}`;
-        opponentAnalysisElement.textContent = `
+        recommendationElement.textContent = getRecommendation(handStrength, probabilities.opponentWinRate, probabilities.playerWinRate);
+        probabilitiesElement.textContent = Combinação da sua mão: ${handStrength}.;
+        opponentAnalysisElement.textContent = 
             Oponente vitória: ${probabilities.opponentWinRate}%,
             Você vitória: ${probabilities.playerWinRate}%,
-            Empates: ${probabilities.drawRate}%.`;
+            Empates: ${probabilities.drawRate}%.;
     }
 
     initializeDeck();
