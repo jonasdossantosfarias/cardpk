@@ -1,71 +1,75 @@
-// probabilityCalculator.js
 export class PokerProbability {
-    constructor(deck, playerHand, communityCards) {
-        this.deck = deck; // Array of all cards in the deck
-        this.playerHand = playerHand; // Array of player's hand cards
-        this.communityCards = communityCards; // Array of community cards
+    static calculateHandStrength(playerHand, communityCards) {
+        const allCards = [...playerHand, ...communityCards];
+        // Avaliar a força da mão do jogador com base em combinações.
+        return PokerProbability.evaluateHand(allCards);
     }
 
-    static calculateOdds(handStrength, opponentStrength) {
-        // Simulated odds based on hand strengths
-        return handStrength / (handStrength + opponentStrength);
-    }
+    static evaluateHand(cards) {
+        // Avaliar a força da mão com base nas regras do poker.
+        // (Implementação detalhada similar ao código atual para classificação de mãos.)
+        const ranks = cards.map(card => card.slice(0, -1));
+        const suits = cards.map(card => card.slice(-1));
+        const rankCounts = {};
+        const suitCounts = {};
 
-    getPossibleHands(cards, numCards = 5) {
-        // Generate all possible combinations of cards
-        const combinations = [];
-        const combine = (start, chosen) => {
-            if (chosen.length === numCards) {
-                combinations.push([...chosen]);
-                return;
-            }
-            for (let i = start; i < cards.length; i++) {
-                chosen.push(cards[i]);
-                combine(i + 1, chosen);
-                chosen.pop();
-            }
-        };
-        combine(0, []);
-        return combinations;
-    }
+        ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+        suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
 
-    evaluateHandStrength(hand) {
-        // Example evaluation logic (e.g., Full House, Flush, etc.)
-        // Will return a numerical score for hand ranking
-        return Math.random() * 100; // Placeholder logic
-    }
-
-    simulateOpponentHands(numOpponents) {
-        const remainingDeck = this.deck.filter(card => 
-            !this.playerHand.includes(card) && 
-            !this.communityCards.includes(card)
+        const isFlush = Object.values(suitCounts).some(count => count >= 5);
+        const sortedRanks = ranks
+            .map(rank => isNaN(rank) ? (rank === 'A' ? 14 : rank === 'K' ? 13 : rank === 'Q' ? 12 : rank === 'J' ? 11 : 10) : parseInt(rank))
+            .sort((a, b) => a - b);
+        const isStraight = sortedRanks.some((rank, index, arr) => 
+            index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
         );
-        const opponentHands = [];
-        for (let i = 0; i < numOpponents; i++) {
-            opponentHands.push(remainingDeck.splice(0, 2));
-        }
-        return opponentHands;
+
+        if (isFlush && isStraight) return "Straight Flush";
+        if (Object.values(rankCounts).includes(4)) return "Quadra";
+        if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
+        if (isFlush) return "Flush";
+        if (isStraight) return "Sequência";
+        if (Object.values(rankCounts).includes(3)) return "Trinca";
+        if (Object.values(rankCounts).filter(count => count === 2).length === 2) return "Dois Pares";
+        if (Object.values(rankCounts).includes(2)) return "Par";
+        return "Carta Alta";
     }
 
-    calculateWinningProbability(numOpponents) {
-        const opponentHands = this.simulateOpponentHands(numOpponents);
-        const playerStrength = this.evaluateHandStrength([...this.playerHand, ...this.communityCards]);
-        
+    static simulateScenarios(playerHand, communityCards, remainingDeck, numOpponents) {
+        const opponentHands = [];
+        const simulations = 10000;
+
         let playerWins = 0, opponentWins = 0, draws = 0;
 
-        for (const opponent of opponentHands) {
-            const opponentStrength = this.evaluateHandStrength([...opponent, ...this.communityCards]);
-            if (playerStrength > opponentStrength) playerWins++;
-            else if (playerStrength < opponentStrength) opponentWins++;
-            else draws++;
+        for (let i = 0; i < simulations; i++) {
+            const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
+            const opponents = [];
+            for (let j = 0; j < numOpponents; j++) {
+                opponents.push(shuffledDeck.slice(j * 2, j * 2 + 2));
+            }
+            const opponentBestHands = opponents.map(hand => PokerProbability.evaluateHand([...hand, ...communityCards]));
+            const playerBestHand = PokerProbability.evaluateHand([...playerHand, ...communityCards]);
+
+            const bestOpponentHand = Math.max(...opponentBestHands);
+
+            if (PokerProbability.compareHands(playerBestHand, bestOpponentHand) > 0) {
+                playerWins++;
+            } else if (PokerProbability.compareHands(bestOpponentHand, playerBestHand) > 0) {
+                opponentWins++;
+            } else {
+                draws++;
+            }
         }
 
-        const total = playerWins + opponentWins + draws;
         return {
-            playerWinRate: ((playerWins / total) * 100).toFixed(2),
-            opponentWinRate: ((opponentWins / total) * 100).toFixed(2),
-            drawRate: ((draws / total) * 100).toFixed(2),
+            playerWinRate: (playerWins / simulations * 100).toFixed(2),
+            opponentWinRate: (opponentWins / simulations * 100).toFixed(2),
+            drawRate: (draws / simulations * 100).toFixed(2),
         };
     }
-}
 
+    static compareHands(hand1, hand2) {
+        const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+        return ranking.indexOf(hand1) - ranking.indexOf(hand2);
+    }
+}
