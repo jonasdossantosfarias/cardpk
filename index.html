@@ -4,13 +4,12 @@
     body {
         font-family: Arial, sans-serif;
         margin: 0;
-        padding: 0;
+        padding: 20px;
         background-color: #f8f9fa;
         color: #212529;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
         min-height: 100vh;
     }
     h2 {
@@ -41,16 +40,12 @@
         font-weight: bold;
         font-size: 14px;
         cursor: pointer;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        transition: transform 0.2s ease-in-out;
         background-color: #ffffff;
         border: 1px solid #ced4da;
     }
-    .card.red {
-        color: #e74c3c;
-    }
-    .card.black {
-        color: #212529;
-    }
+    .card.red { color: #e74c3c; }
+    .card.black { color: #212529; }
     .card:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
@@ -71,38 +66,75 @@
         background-color: #e74c3c;
         color: white !important;
     }
+    .controls {
+        margin: 20px 0;
+        padding: 15px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .opponent-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 10px 0;
+    }
+    .opponent-panel {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+    }
     button {
-        margin: 10px;
-        padding: 10px 15px;
-        font-size: 16px;
+        padding: 8px 15px;
+        font-size: 14px;
         border: none;
-        background-color: #e67e22;
+        background-color: #3498db;
         color: white;
         border-radius: 5px;
         cursor: pointer;
+        margin: 2px;
     }
     button:hover {
-        background-color: #d35400;
+        opacity: 0.9;
+    }
+    button.active {
+        background-color: #e74c3c;
     }
     .info-container {
         margin: 15px;
-        padding: 10px;
+        padding: 15px;
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         width: 80%;
         max-width: 600px;
     }
+    select {
+        padding: 5px 10px;
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        margin-right: 10px;
+    }
 </style>
 </head>
 <body>
     <h2>Análise de Poker Inteligente</h2>
+    <div class="controls">
+        <select id="opponentCount">
+            <option value="1">1 Oponente</option>
+            <option value="2">2 Oponentes</option>
+            <option value="3">3 Oponentes</option>
+            <option value="4">4 Oponentes</option>
+        </select>
+        <button onclick="updateOpponentControls()">Atualizar Oponentes</button>
+    </div>
+    <div id="opponentActions" class="opponent-controls"></div>
     <div class="info-container">
         <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
-        <div id="probabilities" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
-        <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
+        <div id="probabilities" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Probabilidades: </div>
+        <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise dos oponentes: </div>
     </div>
-    <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
 
 <script>
@@ -111,13 +143,107 @@ const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'
 let deck = [];
 let playerHand = [];
 let communityCards = [];
-let opponentAggressive = false;
+let opponents = [];
 
-const deckElement = document.getElementById('deck');
-const recommendationElement = document.getElementById('recommendation');
-const probabilitiesElement = document.getElementById('probabilities');
-const opponentAnalysisElement = document.getElementById('opponent-analysis');
-const opponentRaiseButton = document.getElementById('opponentRaiseButton');
+function initializeOpponents(count) {
+    opponents = Array(count).fill(null).map((_, i) => ({
+        id: i + 1,
+        action: 'wait',
+        aggression: 0,
+        lastBet: 0
+    }));
+}
+
+function createOpponentPanel(opponent) {
+    const actions = ['check', 'raise', 'call', 'fold', 'all-in'];
+    const panel = document.createElement('div');
+    panel.className = 'opponent-panel';
+    panel.innerHTML = `
+        <div>Oponente ${opponent.id}</div>
+        <div>
+            ${actions.map(action => `
+                <button onclick="setOpponentAction(${opponent.id}, '${action}')" 
+                        id="btn-${opponent.id}-${action}"
+                        class="${opponent.action === action ? 'active' : ''}">
+                    ${action.toUpperCase()}
+                </button>
+            `).join('')}
+        </div>
+    `;
+    return panel;
+}
+
+function setOpponentAction(opponentId, action) {
+    const opponent = opponents.find(o => o.id === opponentId);
+    if (opponent) {
+        opponent.action = action;
+        if (action === 'raise' || action === 'all-in') {
+            opponent.aggression++;
+        }
+        updateOpponentControls();
+        updateGameState();
+    }
+}
+
+function updateOpponentControls() {
+    const count = parseInt(document.getElementById('opponentCount').value);
+    initializeOpponents(count);
+    const container = document.getElementById('opponentActions');
+    container.innerHTML = '';
+    opponents.forEach(opponent => {
+        container.appendChild(createOpponentPanel(opponent));
+    });
+}
+
+function calculateOpponentFactor() {
+    let factor = 1;
+    opponents.forEach(opponent => {
+        if (opponent.action === 'raise') factor *= 0.8;
+        if (opponent.action === 'all-in') factor *= 0.6;
+        if (opponent.action === 'fold') factor *= 1.2;
+        factor *= (1 - (opponent.aggression * 0.1));
+    });
+    return factor;
+}
+
+function evaluateHand(cards) {
+    if (cards.length < 2) return "Sem cartas suficientes";
+    
+    const ranks = cards.map(card => card.slice(0, -1));
+    const rankCounts = {};
+    ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+    
+    if (Object.values(rankCounts).includes(3)) return "Trinca";
+    if (Object.values(rankCounts).includes(2)) return "Par";
+    return "Carta Alta";
+}
+
+function updateGameState() {
+    const handStrength = evaluateHand([...playerHand, ...communityCards]);
+    const opponentFactor = calculateOpponentFactor();
+    
+    let recommendation = "Selecione suas cartas...";
+    if (playerHand.length === 2) {
+        const baseStrength = handStrength === "Trinca" ? 0.8 : 
+                           handStrength === "Par" ? 0.6 : 0.3;
+        const adjustedStrength = baseStrength * opponentFactor;
+        
+        recommendation = `Força da mão: ${handStrength} (${(adjustedStrength * 100).toFixed(1)}%)`;
+        if (adjustedStrength > 0.6) {
+            recommendation += " - Boa posição para aumentar!";
+        } else if (adjustedStrength > 0.4) {
+            recommendation += " - Considere pagar com cautela.";
+        } else {
+            recommendation += " - Melhor desistir.";
+        }
+    }
+
+    document.getElementById('recommendation').textContent = `Recomendação: ${recommendation}`;
+    document.getElementById('probabilities').textContent = 
+        `Mão: ${playerHand.join(', ')} | Comunitárias: ${communityCards.join(', ')}`;
+    document.getElementById('opponent-analysis').textContent = 
+        `Análise: ${opponents.map(o => `Oponente ${o.id}: ${o.action.toUpperCase()}`).join(' | ')}`;
+}
 
 function initializeDeck() {
     deck = [];
@@ -130,6 +256,7 @@ function initializeDeck() {
 }
 
 function renderDeck() {
+    const deckElement = document.getElementById('deck');
     deckElement.innerHTML = '';
     deck.forEach(card => {
         const cardElement = document.createElement('div');
@@ -165,58 +292,9 @@ function toggleCardSelection(card, cardElement) {
     updateGameState();
 }
 
-function evaluateHand(cards) {
-    if (cards.length === 0) return "Sem cartas";
-    
-    const ranks = cards.map(card => card.slice(0, -1));
-    const suits = cards.map(card => card.slice(-1));
-    
-    // Contagem de ranks e naipes
-    const rankCounts = {};
-    ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
-    
-    // Verifica par
-    if (Object.values(rankCounts).includes(2)) return "Par";
-    
-    // Verifica trinca
-    if (Object.values(rankCounts).includes(3)) return "Trinca";
-    
-    // Se não encontrou nenhuma combinação
-    return "Carta Alta";
-}
-
-function updateGameState() {
-    const handStrength = evaluateHand([...playerHand, ...communityCards]);
-    
-    let recommendation = "Selecione suas cartas...";
-    if (playerHand.length === 2) {
-        recommendation = `Sua mão atual: ${handStrength}`;
-        if (handStrength === "Par" || handStrength === "Trinca") {
-            recommendation += " - Boa mão para continuar!";
-        } else {
-            recommendation += " - Jogue com cautela.";
-        }
-    }
-
-    recommendationElement.textContent = `Recomendação: ${recommendation}`;
-    probabilitiesElement.textContent = `Mão atual: ${playerHand.join(', ')}`;
-    opponentAnalysisElement.textContent = `Cartas comunitárias: ${communityCards.join(', ')}`;
-}
-
-opponentRaiseButton.addEventListener('click', () => {
-    opponentAggressive = !opponentAggressive;
-    if (opponentAggressive) {
-        opponentRaiseButton.style.backgroundColor = '#e74c3c';
-        opponentRaiseButton.textContent = 'Oponente está agressivo';
-    } else {
-        opponentRaiseButton.style.backgroundColor = '#e67e22';
-        opponentRaiseButton.textContent = 'Oponente aumentou a aposta';
-    }
-    updateGameState();
-});
-
-// Inicializar o jogo
+// Inicialização
 initializeDeck();
+updateOpponentControls();
 </script>
 
 </body></html>
