@@ -67,12 +67,12 @@
             background-color: #e67e22; /* Laranja (Pré-flop) */
             color: white;
         }
-        .selected-community.next-card {
-            background-color: #9b59b6; /* Roxo Claro */
+        .selected-community.turn {
+            background-color: #9b59b6; /* Roxo Claro (Turn) */
             color: white;
         }
-        .selected-community.last-card {
-            background-color: #e74c3c; /* Vermelho Claro */
+        .selected-community.river {
+            background-color: #e74c3c; /* Vermelho Claro (River) */
             color: white;
         }
         button {
@@ -136,31 +136,35 @@
             });
         }
 
-       function toggleCardSelection(card, cardElement) {
-        if (cardElement.classList.contains('selected-hand')) {
-            playerHand = playerHand.filter(c => c !== card);
-            cardElement.classList.remove('selected-hand');
-        } else if (communityCards.includes(card)) {
-            // Remove a carta da lista de comunitárias
-            communityCards = communityCards.filter(c => c !== card);
-            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
-        } else if (playerHand.length < 2) {
-            playerHand.push(card);
-            cardElement.classList.add('selected-hand');
-        } else if (communityCards.length < 5) {
-            communityCards.push(card);
-    
-            // Define a cor específica com base no índice
-            let colorClass = '';
-            if (communityCards.length === 1) colorClass = 'selected-community pre-flop';
-            else if (communityCards.length === 2) colorClass = 'selected-community next-card';
-            else if (communityCards.length === 5) colorClass = 'selected-community last-card';
-            else colorClass = 'selected-community';
-    
-            cardElement.className = `card ${colorClass}`;
+      function toggleCardSelection(card, cardElement) {
+            if (cardElement.classList.contains('selected-hand')) {
+                playerHand = playerHand.filter(c => c !== card);
+                cardElement.classList.remove('selected-hand');
+            } else if (communityCards.includes(card)) {
+                // Remove a carta da lista de comunitárias
+                communityCards = communityCards.filter(c => c !== card);
+                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            } else if (playerHand.length < 2) {
+                playerHand.push(card);
+                cardElement.classList.add('selected-hand');
+            } else if (communityCards.length < 5) {
+                communityCards.push(card);
+        
+                // Define a cor específica com base no índice
+                let colorClass = '';
+                if (communityCards.length <= 3) {
+                    colorClass = 'selected-community pre-flop'; // As 3 primeiras cartas são do pré-flop
+                } else if (communityCards.length === 4) {
+                    colorClass = 'selected-community turn'; // Turn (próxima carta)
+                } else if (communityCards.length === 5) {
+                    colorClass = 'selected-community river'; // River (última carta)
+                }
+        
+                cardElement.className = `card ${colorClass}`;
+            }
+            updateGameState();
         }
-        updateGameState();
-    }
+
 
         function evaluateHand(cards) {
             const ranks = cards.map(card => card.slice(0, -1));
