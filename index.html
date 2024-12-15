@@ -154,6 +154,20 @@
     .opponent-panel {
         display: none;
     }
+    #recommendation {
+        margin-bottom: 10px;
+        font-size: 16px;
+        color: #343a40;
+        line-height: 1.5;
+    }
+
+    #recommendation strong {
+        color: #2c3e50;
+    }
+
+    #recommendation br {
+        margin-bottom: 5px;
+    }
 </style>
 </head>
 <body>
@@ -334,6 +348,48 @@ function checkStraightPotential(handCards, communityCards, valueOrder) {
 }
 
 // Update the updateGameState function to show sequence information more clearly
+function getGameAdvice(handStrength, probabilities, stage) {
+    const strengthValue = parseFloat(handStrength);
+    const winProb = parseFloat(probabilities.win);
+    
+    // Define thresholds for different actions
+    let advice = '';
+    
+    // Pre-flop advice
+    if (stage === 'pre-flop') {
+        if (strengthValue >= 0.8) {
+            advice = "🔥 Mão muito forte! Aumente a aposta agressivamente.";
+        } else if (strengthValue >= 0.6) {
+            advice = "👍 Boa mão! Continue no jogo e considere aumentar.";
+        } else if (strengthValue >= 0.4) {
+            advice = "🤔 Mão mediana. Veja o flop se o custo for baixo.";
+        } else {
+            advice = "👎 Mão fraca. Considere desistir a menos que o blind seja baixo.";
+        }
+    }
+    // Post-flop advice
+    else {
+        if (winProb >= 75) {
+            advice = "🔥 Probabilidade excelente! Aposte forte.";
+        } else if (winProb >= 60) {
+            advice = "💪 Boa posição! Faça apostas moderadas.";
+        } else if (winProb >= 45) {
+            advice = "⚖️ Situação equilibrada. Jogue com cautela e observe as apostas dos oponentes.";
+        } else if (winProb >= 30) {
+            advice = "⚠️ Probabilidade baixa. Considere blefar se os oponentes mostrarem fraqueza.";
+        } else {
+            advice = "❌ Probabilidade muito baixa. Desista se houver apostas significativas.";
+        }
+    }
+
+    // Additional strategic considerations
+    if (stage === 'river' && winProb >= 40 && winProb <= 55) {
+        advice += "\n💡 Momento crítico para blefe se os oponentes mostrarem indecisão.";
+    }
+
+    return advice;
+}
+
 function updateGameState() {
     if (playerHand.length === 2) {
         const handEval = evaluateHand([...playerHand, ...communityCards]);
@@ -348,6 +404,16 @@ function updateGameState() {
                 output += `  Probabilidade de completar: ${result.probability}%<br>`;
             });
         }
+
+        // Add game advice
+        const stage = communityCards.length === 0 ? 'pre-flop' : 
+                     communityCards.length === 3 ? 'flop' :
+                     communityCards.length === 4 ? 'turn' : 'river';
+        
+        const stats = calculateProbabilitiesAgainstOpponents(playerHand, communityCards, 2); // Assuming average 2 opponents
+        const advice = getGameAdvice(handEval.strength, stats, stage);
+        
+        output += `<br><strong>💭 Dica Estratégica:</strong><br>${advice}`;
         
         document.getElementById('recommendation').innerHTML = output;
         updateProbabilities();
