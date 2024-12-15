@@ -197,7 +197,7 @@
         function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
             const opponentPossibleHands = [];
-            const totalSimulations = 10000; // Número de simulações
+            const totalSimulations = 5000; // Ajustado para eficiência
         
             for (let i = 0; i < totalSimulations; i++) {
                 const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
@@ -208,6 +208,9 @@
                     strength: evaluateHand(opponentCards),
                 });
             }
+        
+            return opponentPossibleHands;
+        }
         
             return opponentPossibleHands;
         }
