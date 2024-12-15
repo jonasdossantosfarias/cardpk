@@ -597,9 +597,9 @@ function updateOpponentControls() {
 
 function initializeDeck() {
     deck = [];
-    // Create cards in order from 2 to A for each suit
-    suits.forEach(suit => {
-        values.forEach(value => {
+    // First create all cards in the desired order
+    values.forEach(value => {
+        suits.forEach(suit => {
             deck.push(`${value}${suit}`);
         });
     });
