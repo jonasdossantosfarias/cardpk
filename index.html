@@ -137,11 +137,12 @@
             });
         }
     
-        function toggleCardSelection(card, cardElement) {
+              function toggleCardSelection(card, cardElement) {
             if (cardElement.classList.contains('selected-hand')) {
                 playerHand = playerHand.filter(c => c !== card);
                 cardElement.classList.remove('selected-hand');
             } else if (communityCards.includes(card)) {
+                // Remove a carta da lista de comunitárias
                 communityCards = communityCards.filter(c => c !== card);
                 cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
             } else if (playerHand.length < 2) {
@@ -149,7 +150,18 @@
                 cardElement.classList.add('selected-hand');
             } else if (communityCards.length < 5) {
                 communityCards.push(card);
-                cardElement.className = `card selected-community`;
+        
+                // Define a cor específica com base no índice
+                let colorClass = '';
+                if (communityCards.length <= 3) {
+                    colorClass = 'selected-community pre-flop'; // As 3 primeiras cartas são do pré-flop
+                } else if (communityCards.length === 4) {
+                    colorClass = 'selected-community turn'; // Turn (próxima carta)
+                } else if (communityCards.length === 5) {
+                    colorClass = 'selected-community river'; // River (última carta)
+                }
+        
+                cardElement.className = `card ${colorClass}`;
             }
             updateGameState();
         }
