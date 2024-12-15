@@ -196,53 +196,69 @@
         
         function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
-            let opponentWins = 0, playerWins = 0, draws = 0;
-            const totalSimulations = 10000;
-
+            const opponentPossibleHands = [];
+            const totalSimulations = 10000; // Número de simulações
+        
             for (let i = 0; i < totalSimulations; i++) {
                 const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
                 const opponentHand = shuffledDeck.slice(0, 2);
-                const playerBest = evaluateHand([...playerHand, ...communityCards]);
-                const opponentBest = evaluateHand([...opponentHand, ...communityCards]);
-
-                if (compareHands(opponentBest, playerBest) > 0) {
-                    opponentWins++;
-                } else if (compareHands(playerBest, opponentBest) > 0) {
-                    playerWins++;
-                } else {
-                    draws++;
-                }
+                const opponentCards = [...opponentHand, ...communityCards];
+                opponentPossibleHands.push({
+                    hand: opponentHand,
+                    strength: evaluateHand(opponentCards),
+                });
             }
-
-            return {
-                opponentWinRate: (opponentWins / totalSimulations * 100).toFixed(2),
-                playerWinRate: (playerWins / totalSimulations * 100).toFixed(2),
-                drawRate: (draws / totalSimulations * 100).toFixed(2)
-            };
+        
+            return opponentPossibleHands;
         }
-
+        
         function compareHands(hand1, hand2) {
             const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
             return ranking.indexOf(hand1) - ranking.indexOf(hand2);
         }
 
-        function getRecommendation(handStrength, opponentWinRate) {
-            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            if (opponentAggressive) opponentWinRate += 20; // Ajuste se o oponente está sendo agressivo
+        function calculateWinningProbability(opponentPossibleHands) {
+            let playerWins = 0, opponentWins = 0, draws = 0;
+            const totalSimulations = opponentPossibleHands.length;
         
-            if (handStrength === "Sem Combinação" && opponentAggressive) {
-                return "Recomendação: Desistir (Fold) devido à mão fraca.";
+            opponentPossibleHands.forEach(opponent => {
+                const playerBest = evaluateHand([...playerHand, ...communityCards]);
+                const opponentBest = opponent.strength;
+        
+                if (compareHands(playerBest, opponentBest) > 0) {
+                    playerWins++;
+                } else if (compareHands(opponentBest, playerBest) > 0) {
+                    opponentWins++;
+                } else {
+                    draws++;
+                }
+            });
+        
+            return {
+                playerWinRate: (playerWins / totalSimulations * 100).toFixed(2),
+                opponentWinRate: (opponentWins / totalSimulations * 100).toFixed(2),
+                drawRate: (draws / totalSimulations * 100).toFixed(2),
+            };
+        }
+
+        function getRecommendation(handStrength, opponentWinRate, playerWinRate) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+        
+            if (handStrength === "Carta Alta" || handStrength === "Sem Combinação") {
+                if (opponentWinRate > playerWinRate || opponentAggressive) {
+                    return "Recomendação: Desistir (Fold) devido à mão fraca e alta agressividade do oponente.";
+                } else {
+                    return "Recomendação: Pague (Call) com cautela.";
+                }
             }
-            if (strongHands.includes(handStrength) && opponentWinRate < 50) {
-                return "Recomendação: Aposte tudo (All-in) ou aumente a aposta (Raise)!";
+        
+            if (strongHands.includes(handStrength) && playerWinRate > opponentWinRate) {
+                return "Recomendação: Aposte agressivamente (Raise ou All-in).";
             }
             if (opponentWinRate >= 50) {
-                return "Recomendação: Desistir (Fold).";
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
             }
-            if (handStrength === "Par" || handStrength === "Dois Pares") {
-                return "Recomendação: Pague (Call) para continuar na rodada.";
-            }
-            return "Recomendação: Passe (Check) e jogue com cautela.";
+            return "Recomendação: Passe (Check) ou Pague (Call).";
         }
 
         function updateGameState() {
