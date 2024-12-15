@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,14 +20,7 @@
         h2 {
             font-size: 1.5rem;
             color: #495057;
-        }
-        .opponent-container, .player-container, .deck {
-            margin: 10px;
-            padding: 15px;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
-            background-color: #ffffff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin: 20px 0 10px 0;
         }
         .deck {
             display: flex;
@@ -35,21 +28,26 @@
             gap: 8px;
             justify-content: center;
             padding: 10px;
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
         }
         .card {
             width: 50px;
             height: 70px;
             border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             display: flex;
             justify-content: center;
             align-items: center;
             font-weight: bold;
             font-size: 14px;
             cursor: pointer;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             background-color: #ffffff;
             border: 1px solid #ced4da;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
         .card.red {
             color: #e74c3c;
@@ -70,16 +68,17 @@
             color: white;
         }
         button {
+            margin: 10px;
             padding: 10px 15px;
             font-size: 16px;
             border: none;
-            background-color: #3498db;
+            background-color: #e67e22;
             color: white;
             border-radius: 5px;
             cursor: pointer;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #d35400;
         }
     </style>
 </head>
@@ -88,36 +87,26 @@
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
-
-    <div class="opponent-container">
-        <h3>Oponentes</h3>
-        <label><input type="checkbox" id="op1"> OP1</label>
-        <label><input type="checkbox" id="op2"> OP2</label>
-        <label><input type="checkbox" id="op3"> OP3</label>
-        <label><input type="checkbox" id="op4"> OP4</label>
-    </div>
-
-    <div class="player-container">
-        <h3>Jogador</h3>
-        <button onclick="playerAction('Desistir')">Desistir</button>
-        <button onclick="playerAction('Check')">Check</button>
-        <button onclick="playerAction('Pagar')">Pagar</button>
-        <button onclick="playerAction('Aumentar')">Aumentar</button>
-        <button onclick="playerAction('Pay All')">Pay All</button>
-    </div>
-
+    <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
-
     <script>
         const suits = ['♥', '♦', '♣', '♠'];
         const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
         let deck = [];
         let playerHand = [];
         let communityCards = [];
+        let opponentAggressive = false;
 
+        const deckElement = document.getElementById('deck');
         const recommendationElement = document.getElementById('recommendation');
         const probabilitiesElement = document.getElementById('probabilities');
         const opponentAnalysisElement = document.getElementById('opponent-analysis');
+        const opponentRaiseButton = document.getElementById('opponentRaiseButton');
+
+        opponentRaiseButton.addEventListener('click', () => {
+            opponentAggressive = true;
+            updateGameState();
+        });
 
         function initializeDeck() {
             suits.forEach(suit => {
@@ -129,11 +118,10 @@
         }
 
         function renderDeck() {
-            const deckElement = document.getElementById('deck');
             deckElement.innerHTML = '';
             deck.forEach(card => {
                 const cardElement = document.createElement('div');
-                cardElement.className = `card ${['♥', '♦'].includes(card.slice(-1)) ? 'red' : 'black'}`;
+                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
                 cardElement.textContent = card;
                 cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
                 deckElement.appendChild(cardElement);
@@ -158,21 +146,96 @@
         }
 
         function evaluateHand(cards) {
-            // Avaliação simplificada da força da mão
-            return "Avaliação da mão";
+            const ranks = cards.map(card => card.slice(0, -1));
+            const suits = cards.map(card => card.slice(-1));
+            const rankCounts = {};
+            const suitCounts = {};
+
+            ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+            suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+
+            const isFlush = Object.values(suitCounts).some(count => count >= 5);
+            const sortedRanks = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
+            const isStraight = sortedRanks.some((rank, index, arr) =>
+                index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
+            );
+
+            if (isFlush && isStraight) return "Straight Flush";
+            if (Object.values(rankCounts).includes(4)) return "Quadra";
+            if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
+            if (isFlush) return "Flush";
+            if (isStraight) return "Sequência";
+            if (Object.values(rankCounts).includes(3)) return "Trinca";
+            if (Object.values(rankCounts).filter(count => count === 2).length === 2) return "Dois Pares";
+            if (Object.values(rankCounts).includes(2)) return "Par";
+            return "Carta Alta";
+        }
+
+        function simulateOpponentHands() {
+            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
+            let opponentWins = 0, playerWins = 0, draws = 0;
+            const totalSimulations = 1000;
+
+            for (let i = 0; i < totalSimulations; i++) {
+                const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
+                const opponentHand = shuffledDeck.slice(0, 2);
+                const playerBest = evaluateHand([...playerHand, ...communityCards]);
+                const opponentBest = evaluateHand([...opponentHand, ...communityCards]);
+
+                if (compareHands(opponentBest, playerBest) > 0) {
+                    opponentWins++;
+                } else if (compareHands(playerBest, opponentBest) > 0) {
+                    playerWins++;
+                } else {
+                    draws++;
+                }
+            }
+
+            return {
+                opponentWinRate: (opponentWins / totalSimulations * 100).toFixed(2),
+                playerWinRate: (playerWins / totalSimulations * 100).toFixed(2),
+                drawRate: (draws / totalSimulations * 100).toFixed(2)
+            };
+        }
+
+        function compareHands(hand1, hand2) {
+            const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            return ranking.indexOf(hand1) - ranking.indexOf(hand2);
+        }
+
+        function getRecommendation(handStrength, opponentWinRate) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            if (opponentAggressive) opponentWinRate += 20;
+
+            if (strongHands.includes(handStrength) && opponentWinRate < 50) {
+                return "Recomendação: Aposte agressivamente (Raise ou All-in).";
+            }
+            if (opponentWinRate >= 50) {
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
+            }
+            return "Recomendação: Jogue com cautela (Call ou Check).";
         }
 
         function updateGameState() {
             if (playerHand.length < 2) {
-                recommendationElement.textContent = "Selecione 2 cartas para sua mão.";
+                recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
+                probabilitiesElement.textContent = "";
+                opponentAnalysisElement.textContent = "";
                 return;
             }
-            recommendationElement.textContent = "Jogue com cautela!";
-            probabilitiesElement.textContent = "Sua mão: " + playerHand.join(', ');
-        }
 
-        function playerAction(action) {
-            alert(`Você escolheu: ${action}`);
+            const allCards = [...playerHand, ...communityCards];
+            const handStrength = evaluateHand(allCards);
+            const opponentSimulations = simulateOpponentHands();
+
+            const recommendation = getRecommendation(handStrength, opponentSimulations.opponentWinRate);
+
+            recommendationElement.textContent = recommendation;
+            probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
+            opponentAnalysisElement.textContent = `
+                Oponente vitória: ${opponentSimulations.opponentWinRate}%,
+                Você vitória: ${opponentSimulations.playerWinRate}%,
+                Empates: ${opponentSimulations.drawRate}%.`;
         }
 
         initializeDeck();
