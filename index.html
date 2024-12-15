@@ -182,7 +182,10 @@
             const isStraight = sortedRanks.some((rank, index, arr) => 
                 index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
             );
-        
+
+            if (!isFlush && !isStraight && !Object.values(rankCounts).some(count => count >= 2)) {
+                return { name: "Carta Alta", highestCard: Math.max(...sortedRanks) };
+            }
             if (isFlush && isStraight) return "Straight Flush";
             if (Object.values(rankCounts).includes(4)) return "Quadra";
             if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
