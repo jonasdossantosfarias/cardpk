@@ -101,20 +101,6 @@
         width: 95%;
         max-width: 800px;
     }
-    .opponent-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin: 10px 0;
-        width: 95%;
-        max-width: 800px;
-    }
-    .opponent-panel {
-        background: #f8f9fa;
-        padding: 10px;
-        border-radius: 5px;
-        border: 1px solid #dee2e6;
-    }
     button {
         padding: 8px 15px;
         font-size: 14px;
@@ -163,437 +149,324 @@
             padding: 3px;
         }
     }
+    
+    .opponent-controls,
+    .opponent-panel {
+        display: none;
+    }
 </style>
 </head>
 <body>
     <h2>Análise de Poker Inteligente</h2>
     <div class="controls">
-        <select id="opponentCount">
-            <option value="1">1 Oponente</option>
-            <option value="2">2 Oponentes</option>
-            <option value="3">3 Oponentes</option>
-            <option value="4">4 Oponentes</option>
-        </select>
-        <button onclick="updateOpponentControls()">Atualizar Oponentes</button>
+        <button onclick="initializeDeck()">Reiniciar Jogo</button>
     </div>
-    <div id="opponentActions" class="opponent-controls"></div>
     <div class="info-container">
         <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
         <div id="probabilities" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Probabilidades: </div>
-        <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise dos oponentes: </div>
-        <div id="predicted-hands" style="font-size: 14px; color: #6c757d; margin-top: 10px;">Mãos prováveis dos oponentes: </div>
     </div>
     <div class="deck" id="deck"></div>
 
 <script>
-function analyzeCardCounts(cards) {
-    const suits = {};
-    const ranks = {};
-    cards.forEach(card => {
-        const suit = card.slice(-1);
-        const rank = card.slice(0, -1);
-        suits[suit] = (suits[suit] || 0) + 1;
-        ranks[rank] = (ranks[rank] || 0) + 1;
-    });
-    return { suits, ranks };
-}
-
-function calculateOutsAndOdds(cards, availableCards) {
-    const outs = [];
-    const odds = {};
-    const analysis = analyzeCardCounts(cards);
-    
-    // Flush draws
-    Object.entries(analysis.suits).forEach(([suit, count]) => {
-        if (count === 4) {
-            const flushOuts = availableCards.filter(card => card.endsWith(suit));
-            outs.push(...flushOuts);
-            odds.flush = (flushOuts.length / availableCards.length) * 100;
-        }
-    });
-
-    // Straight draws
-    if (hasStraightDraw(cards)) {
-        const straightOuts = findStraightCompletionCards(cards)
-            .filter(card => availableCards.includes(card));
-        outs.push(...straightOuts);
-        odds.straight = (straightOuts.length / availableCards.length) * 100;
-    }
-
-    // Pair/Set draws
-    Object.entries(analysis.ranks).forEach(([rank, count]) => {
-        if (count === 2) {
-            const setOuts = availableCards.filter(card => card.startsWith(rank));
-            if (setOuts.length > 0) {
-                outs.push(...setOuts);
-                odds.set = (setOuts.length / availableCards.length) * 100;
-            }
-        }
-    });
-
-    return { outs: [...new Set(outs)], odds };
-}
-
-const suits = ['♥', '♦', '♣', '♠'];
 const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const suits = ['♠', '♥', '♣', '♦'];
+
 let deck = [];
 let playerHand = [];
 let communityCards = [];
-let opponents = [];
-let currentPhase = 'hand'; // Can be: 'hand', 'pre-flop', 'flop', 'river'
-let opponentHands = [];
-
-let blinds = {
-    small: 10,
-    big: 20
-};
-
-function getBlindsString() {
-    return `Small: ${blinds.small}, Big: ${blinds.big}`;
-}
-
-function getKickersString(cards) {
-    if (cards.length < 2) return [];
-    const ranks = cards.map(card => card.slice(0, -1));
-    return ranks.sort((a,b) => values.indexOf(b) - values.indexOf(a)).slice(1);
-}
-
-function isStraightFlush(cards) {
-    return isFlush(cards) && isStraight(cards);
-}
-
-function isRoyalFlush(cards) {
-    return isStraightFlush(cards) && cards.some(card => card.startsWith('A'));
-}
-
-function isFlush(cards) {
-    if (cards.length < 5) return false;
-    const suits = cards.map(card => card.slice(-1));
-    return suits.every(suit => suit === suits[0]);
-}
-
-function isStraight(cards) {
-    if (cards.length < 5) return false;
-    const ranks = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
-    for (let i = 1; i < ranks.length; i++) {
-        if (ranks[i] !== ranks[i-1] + 1) return false;
-    }
-    return true;
-}
-
-function isPair(cards) {
-    const ranks = cards.map(card => card.slice(0, -1));
-    return new Set(ranks).size < ranks.length;
-}
-
-function isFullHouse(cards) {
-    const rankCounts = {};
-    cards.forEach(card => {
-        const rank = card.slice(0, -1);
-        rankCounts[rank] = (rankCounts[rank] || 0) + 1;
-    });
-    return Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2);
-}
-
-function isQuads(cards) {
-    const ranks = {};
-    cards.forEach(card => {
-        const rank = card.slice(0, -1);
-        ranks[rank] = (ranks[rank] || 0) + 1;
-    });
-    return Object.values(ranks).some(count => count === 4);
-}
-
-function isThreeOfAKind(cards) {
-    const ranks = {};
-    cards.forEach(card => {
-        const rank = card.slice(0, -1);
-        ranks[rank] = (ranks[rank] || 0) + 1;
-    });
-    return Object.values(ranks).some(count => count === 3);
-}
-
-function isTwoPair(cards) {
-    const ranks = {};
-    cards.forEach(card => {
-        const rank = card.slice(0, -1);
-        ranks[rank] = (ranks[rank] || 0) + 1;
-    });
-    const pairs = Object.values(ranks).filter(count => count === 2);
-    return pairs.length >= 2;
-}
 
 function evaluateHand(cards) {
-    if (cards.length < 2) return { type: "Sem cartas suficientes", strength: 0 };
+    if (cards.length === 0) return { type: 'Mão vazia', strength: 0 };
     
-    let handType = "Carta Alta";
-    let strength = 0;
+    const formattedCards = cards.map(card => ({
+        value: card.slice(0, -1),
+        suit: card.slice(-1)
+    }));
+
+    const valueCounts = {};
+    const suitCounts = {};
+    formattedCards.forEach(card => {
+        valueCounts[card.value] = (valueCounts[card.value] || 0) + 1;
+        suitCounts[card.suit] = (suitCounts[card.suit] || 0) + 1;
+    });
+
+    // Check for each hand type
+    const hasFlush = Object.values(suitCounts).some(count => count >= 5);
+    const hasQuads = Object.values(valueCounts).some(count => count === 4);
+    const hasTrips = Object.values(valueCounts).some(count => count === 3);
+    const pairCount = Object.values(valueCounts).filter(count => count === 2).length;
+
+    // Check for straight
+    const sortedValues = [...new Set(formattedCards.map(card => values.indexOf(card.value)))].sort((a, b) => a - b);
+    let hasStraight = false;
+    let isRoyal = false;
     
-    // Evaluate hands in descending order of strength
-    if (isRoyalFlush(cards)) {
-        handType = "Royal Flush";
-        strength = 1;
-    } else if (isStraightFlush(cards)) {
-        handType = "Straight Flush";
-        strength = 0.95;
-    } else if (isQuads(cards)) {
-        handType = "Quadra";
-        strength = 0.9;
-    } else if (isFullHouse(cards)) {
-        handType = "Full House";
-        strength = 0.85;
-    } else if (isFlush(cards)) {
-        handType = "Flush";
-        strength = 0.8;
-    } else if (isStraight(cards)) {
-        handType = "Sequência";
-        strength = 0.75;
-    } else if (isThreeOfAKind(cards)) {
-        handType = "Trio";
-        strength = 0.7;
-    } else if (isTwoPair(cards)) {
-        handType = "Dois Pares";
-        strength = 0.6;
-    } else if (isPair(cards)) {
-        handType = "Um Par";
-        strength = 0.5;
-    } else {
-        handType = cards.length >= 5 ? "Carta Alta" : "Mão muito baixa";
-        strength = 0.3;
+    for (let i = 0; i <= sortedValues.length - 5; i++) {
+        if (sortedValues[i + 4] - sortedValues[i] === 4) {
+            hasStraight = true;
+            // Check if it's a Royal Straight (10 through Ace)
+            if (sortedValues[i + 4] === values.indexOf('A') && sortedValues[i] === values.indexOf('10')) {
+                isRoyal = true;
+            }
+            break;
+        }
+    }
+
+    // Return hand ranking with detailed information
+    if (isRoyal && hasFlush) {
+        return { type: '1 - Sequência Real Royal', strength: 1.0, detail: 'Royal Flush - Melhor mão possível!' };
+    }
+    if (hasFlush && hasStraight) {
+        return { type: '2 - Sequência Straight Flush', strength: 0.95, detail: 'Straight Flush - Mão extremamente forte!' };
+    }
+    if (hasQuads) {
+        return { type: '3 - Quadra', strength: 0.9, detail: 'Quadra - Mão muito forte!' };
+    }
+    if (hasTrips && pairCount >= 1) {
+        return { type: '4 - Full House', strength: 0.85, detail: 'Full House - Mão muito forte!' };
+    }
+    if (hasFlush) {
+        return { type: '5 - Flush', strength: 0.8, detail: 'Flush - Mão forte!' };
+    }
+    if (hasStraight) {
+        return { type: '6 - Sequência', strength: 0.75, detail: 'Sequência completa' };
+    }
+    if (hasTrips) {
+        return { type: '7 - Trinca', strength: 0.7, detail: 'Trinca - Mão média-forte' };
+    }
+    if (pairCount === 2) {
+        return { type: '8 - Dois Pares', strength: 0.6, detail: 'Dois pares - Mão média' };
+    }
+    if (pairCount === 1) {
+        return { type: '9 - Par', strength: 0.5, detail: `Par de ${formattedCards.find(card => valueCounts[card.value] === 2).value}s` };
+    }
+
+    // For high card hands, determine if it's high or low
+    const highestCard = Math.max(...sortedValues);
+    if (highestCard >= values.indexOf('J')) {
+        return { type: '10 - Carta Alta', strength: 0.3, detail: `Carta alta ${values[highestCard]}` };
     }
     
-    return { type: handType, strength };
+    return { type: '11 - Carta Baixa', strength: 0.2, detail: `Carta baixa ${values[highestCard]}` };
+}
+
+// Update the checkStraightPotential function to be more focused on sequences
+function checkStraightPotential(handCards, communityCards, valueOrder) {
+    const holeValues = handCards.map(card => card.slice(0, -1));
+    const holeIndexes = holeValues.map(v => valueOrder.indexOf(v));
+    
+    let results = [];
+    
+    // Pre-flop analysis
+    if (handCards.length === 2) {
+        const holeDiff = Math.abs(holeIndexes[0] - holeIndexes[1]);
+        const highCard = Math.max(...holeIndexes);
+        const lowCard = Math.min(...holeIndexes);
+        
+        // Connected cards
+        if (holeDiff === 1) {
+            results.push({
+                stage: "Pré-flop",
+                detail: `Sequência potencial direta: ${holeValues[0]}-${holeValues[1]}`,
+                probability: highCard > 9 ? 35 : 30
+            });
+        } 
+        // One gap
+        else if (holeDiff === 2) {
+            results.push({
+                stage: "Pré-flop",
+                detail: `Sequência com um espaço: ${holeValues[0]}-${holeValues[1]}`,
+                probability: highCard > 9 ? 28 : 23
+            });
+        } 
+        // Two gap
+        else if (holeDiff === 3) {
+            results.push({
+                stage: "Pré-flop",
+                detail: `Sequência com dois espaços: ${holeValues[0]}-${holeValues[1]}`,
+                probability: highCard > 9 ? 20 : 15
+            });
+        }
+    }
+
+    // Post-flop analysis
+    if (communityCards.length > 0) {
+        const allCards = [...handCards, ...communityCards];
+        const allValues = allCards.map(c => valueOrder.indexOf(c.slice(0, -1)))
+                                .sort((a, b) => a - b);
+        
+        let maxSequence = 1;
+        let currentSequence = 1;
+        let sequenceCards = [valueOrder[allValues[0]]];
+        
+        for (let i = 1; i < allValues.length; i++) {
+            if (allValues[i] === allValues[i-1] + 1) {
+                currentSequence++;
+                sequenceCards.push(valueOrder[allValues[i]]);
+            } else if (allValues[i] !== allValues[i-1]) {
+                if (currentSequence > maxSequence) {
+                    maxSequence = currentSequence;
+                }
+                currentSequence = 1;
+                sequenceCards = [valueOrder[allValues[i]]];
+            }
+        }
+        
+        maxSequence = Math.max(maxSequence, currentSequence);
+        
+        if (maxSequence >= 3) {
+            const remainingNeeded = 5 - maxSequence;
+            const stage = communityCards.length === 3 ? "Flop" : 
+                         communityCards.length === 4 ? "Turn" : "River";
+            
+            const probability = maxSequence === 4 ? 45 :
+                              maxSequence === 3 ? 30 : 15;
+            
+            results.push({
+                stage: stage,
+                detail: `${maxSequence} cartas em sequência (${sequenceCards.join('-')}), faltam ${remainingNeeded}`,
+                probability: probability
+            });
+        }
+    }
+
+    return results;
+}
+
+// Update the updateGameState function to show sequence information more clearly
+function updateGameState() {
+    if (playerHand.length === 2) {
+        const handEval = evaluateHand([...playerHand, ...communityCards]);
+        const straightResults = checkStraightPotential(playerHand, communityCards, values);
+        
+        let output = `<strong>Força da Mão:</strong> ${handEval.type} - ${handEval.detail}<br>`;
+        
+        if (straightResults.length > 0) {
+            output += "<br><strong>Análise de Sequência:</strong><br>";
+            straightResults.forEach(result => {
+                output += `• ${result.stage}: ${result.detail}<br>`;
+                output += `  Probabilidade de completar: ${result.probability}%<br>`;
+            });
+        }
+        
+        document.getElementById('recommendation').innerHTML = output;
+        updateProbabilities();
+    }
+}
+
+function calculateOutsAndOdds(currentCards, availableCards) {
+    const outs = [];
+    const odds = {};
+    
+    if (currentCards.length < 2) return { outs, odds };
+
+    const canMakeStraight = (cards) => {
+        const cardValues = cards.map(card => {
+            const val = card.slice(0, -1);
+            return values.indexOf(val);
+        }).sort((a, b) => a - b);
+        
+        let gaps = 0;
+        for (let i = 1; i < cardValues.length; i++) {
+            gaps += cardValues[i] - cardValues[i-1] - 1;
+        }
+        return gaps <= 2;
+    };
+
+    const possibleHands = {
+        'Royal Flush': { probability: 0, cards: [] },
+        'Straight Flush': { probability: 0, cards: [] },
+        'Quadra': { probability: 0, cards: [] },
+        'Full House': { probability: 0, cards: [] },
+        'Flush': { probability: 0, cards: [] },
+        'Sequência': { probability: 0, cards: [] }
+    };
+
+    if (canMakeStraight(currentCards)) {
+        possibleHands['Sequência'].probability = 15;
+    }
+
+    const suitCounts = {};
+    currentCards.forEach(card => {
+        const suit = card.slice(-1);
+        suitCounts[suit] = (suitCounts[suit] || 0) + 1;
+    });
+
+    Object.entries(suitCounts).forEach(([suit, count]) => {
+        if (count >= 3) {
+            possibleHands['Flush'].probability = 20;
+        }
+    });
+
+    return { outs, odds: possibleHands };
 }
 
 function calculateWinProbability() {
     const handEval = evaluateHand([...playerHand, ...communityCards]);
     let probability = handEval.strength;
-
-    // Position adjustments
-    const position = opponents.length;
-    const positionBonus = (position / 6) * 0.15; // Up to 15% bonus for late position
-    probability += positionBonus;
-
-    // Opponent analysis
-    const activeOpponents = opponents.filter(o => o.action !== 'D').length;
-    const aggressiveOpponents = opponents.filter(o => o.action === 'A' || o.action === 'PT').length;
     
-    // Adjust based on opponent actions and count
-    probability *= Math.pow(0.85, activeOpponents); // Reduce probability for each active opponent
-    probability *= Math.pow(0.9, aggressiveOpponents); // Further reduce for aggressive opponents
-
-    // Add outs probability
-    if (handEval.outs && handEval.outs.length > 0) {
-        const outsBonus = (handEval.outs.length / 47) * 0.3; // Max 30% bonus from outs
+    const availableCards = deck.filter(card => 
+        !playerHand.includes(card) && !communityCards.includes(card));
+    const { outs } = calculateOutsAndOdds([...playerHand, ...communityCards], availableCards);
+    
+    if (outs.length > 0) {
+        const outsBonus = (outs.length / 47) * 0.3;
         probability += outsBonus;
     }
 
     return Math.min(Math.max(probability, 0), 1);
 }
 
-function updateGameState() {
-    if (playerHand.length === 2) {
-        const handEval = evaluateHand([...playerHand, ...communityCards]);
-        let output = `<strong>Força da Mão:</strong> ${handEval.type}<br><br>`;
-        
-        // Simplified recommendations based on game phase and hand strength
-        output += "<strong>Recomendação:</strong><br>";
-        
-        if (communityCards.length === 0) {
-            // Pre-flop
-            if (handEval.strength > 0.7) {
-                output += "• Mão forte - Aumente a aposta<br>";
-            } else if (handEval.strength > 0.5) {
-                output += "• Mão média - Pague ou faça aumento moderado<br>";
-            } else {
-                output += "• Mão fraca - Melhor desistir se houver aumento<br>";
-            }
-        } else if (communityCards.length === 3) {
-            // Flop
-            if (handEval.strength > 0.8) {
-                output += "• Mão muito forte - Aumente agressivamente<br>";
-            } else if (handEval.strength > 0.6) {
-                output += "• Boa mão - Continue apostando<br>";
-            } else if (handEval.strength > 0.4) {
-                output += "• Mão marginal - Considere pagar se barato<br>";
-            } else {
-                output += "• Mão fraca - Melhor desistir<br>";
-            }
-        } else {
-            // Turn/River
-            if (handEval.strength > 0.8) {
-                output += "• Mão muito forte - Maximize o valor<br>";
-            } else if (handEval.strength > 0.6) {
-                output += "• Mão forte - Continue apostando<br>";
-            } else {
-                output += "• Mão fraca - Check/Fold<br>";
-            }
-        }
-
-        const activeOpponents = opponents.filter(o => o.action !== 'D').length;
-        output += `<br>• ${activeOpponents} oponente(s) ativo(s)<br>`;
-        
-        document.getElementById('recommendation').innerHTML = output;
-        document.getElementById('probabilities').innerHTML = '';
-        document.getElementById('opponent-analysis').style.display = 'none';
-    }
-}
-
-function generateOpponentHands() {
-    opponentHands = [];
-    const usedCards = [...playerHand, ...communityCards];
+function calculateProbabilitiesAgainstOpponents(myCards, communityCards, opponentCount) {
+    const handEval = evaluateHand([...myCards, ...communityCards]);
+    let baseWinProb = handEval.strength;
     
-    // Generate hands for each active opponent
-    opponents.forEach((opponent, index) => {
-        if (opponent.action === 'D') {
-            opponentHands[index] = [];
-            return;
-        }
-
-        let availableCards = deck.filter(card => !usedCards.includes(card));
-        let opponentHand = [];
-
-        // Probabilistic hand generation based on opponent action
-        if (opponent.action === 'A' || opponent.action === 'PT') {
-            // Higher chance of premium hands
-            const premiumCards = availableCards.filter(card => 
-                card.startsWith('A') || card.startsWith('K') || 
-                card.startsWith('Q') || card.startsWith('J')
-            );
-            
-            if (premiumCards.length >= 2) {
-                opponentHand = premiumCards.slice(0, 2);
-            }
-        } else if (opponent.action === 'P') {
-            // Medium strength hands
-            const mediumCards = availableCards.filter(card => 
-                !card.startsWith('2') && !card.startsWith('3') &&
-                !card.startsWith('4') && !card.startsWith('5')
-            );
-            
-            if (mediumCards.length >= 2) {
-                opponentHand = mediumCards.slice(0, 2);
-            }
-        }
-
-        // If no specific hand was generated, choose random cards
-        if (opponentHand.length < 2) {
-            while (opponentHand.length < 2 && availableCards.length > 0) {
-                const randomIndex = Math.floor(Math.random() * availableCards.length);
-                opponentHand.push(availableCards[randomIndex]);
-                availableCards.splice(randomIndex, 1);
-            }
-        }
-
-        opponentHands[index] = opponentHand;
-        usedCards.push(...opponentHand);
-    });
-}
-
-// Add this helper function that was also missing
-function hasStraightDraw(cards) {
-    if (cards.length < 3) return false;
-    
-    // Convert cards to ranks and sort them
-    const ranks = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
-    const uniqueRanks = [...new Set(ranks)];
-    
-    // Check for consecutive cards
-    let maxConsecutive = 1;
-    let currentConsecutive = 1;
-    
-    for (let i = 1; i < uniqueRanks.length; i++) {
-        if (uniqueRanks[i] === uniqueRanks[i-1] + 1) {
-            currentConsecutive++;
-            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
-        } else {
-            currentConsecutive = 1;
-        }
-    }
-    
-    // Special case for Ace-low straight
-    if (ranks.includes(values.length - 1)) { // If there's an Ace
-        const lowAceRanks = [...ranks.filter(r => r < 4), -1]; // Consider Ace as -1 for low straight
-        lowAceRanks.sort((a, b) => a - b);
-        
-        let lowConsecutive = 1;
-        for (let i = 1; i < lowAceRanks.length; i++) {
-            if (lowAceRanks[i] === lowAceRanks[i-1] + 1) {
-                lowConsecutive++;
-                maxConsecutive = Math.max(maxConsecutive, lowConsecutive);
-            } else {
-                break;
-            }
-        }
-    }
-    
-    // Return true if we have 4 consecutive cards (one card away from straight)
-    // or if we already have a straight
-    return maxConsecutive >= 4;
-}
-
-function initializeOpponents(count) {
-    opponents = Array(count).fill(null).map((_, i) => ({
-        id: i + 1,
-        action: 'C',
-        aggression: 0,
-        lastBet: 0
-    }));
-}
-
-function createOpponentPanel(opponent) {
-    const actions = ['C', 'A', 'P', 'D', 'PT'];
-    const actionLabels = {
-        'C': 'C',  // Check
-        'A': 'A',  // Aumentar
-        'P': 'P',  // Pagar
-        'D': 'D',  // Desistir 
-        'PT': 'PT' // Pot/All-in
+    const opponentAdjustment = {
+        1: 0.9,
+        2: 0.8,
+        3: 0.7,
+        4: 0.6
     };
+
+    let winProb = baseWinProb * opponentAdjustment[opponentCount];
     
-    const panel = document.createElement('div');
-    panel.className = 'opponent-panel';
-    panel.innerHTML = `
-        <div>Oponente ${opponent.id}</div>
-        <div>
-            ${actions.map(action => `
-                <button onclick="setOpponentAction(${opponent.id}, '${action}')" 
-                        id="btn-${opponent.id}-${action}"
-                        class="${opponent.action === action ? 'active' : ''}">
-                    ${actionLabels[action]}
-                </button>
-            `).join('')}
-        </div>
-    `;
-    return panel;
-}
-
-function setOpponentAction(opponentId, action) {
-    const opponent = opponents.find(o => o.id === opponentId);
-    if (opponent) {
-        opponent.action = action;
-        if (action === 'A' || action === 'PT') {
-            opponent.aggression++;
-        }
-        updateOpponentControls();
-        updateGameState();
+    if (communityCards.length === 0) {
+        winProb *= 0.9;
+    } else if (communityCards.length <= 3) {
+        winProb *= 0.95;
     }
+
+    let tieProb = 0.05 / opponentCount;
+    let loseProb = 1 - winProb - tieProb;
+
+    winProb = Math.min(Math.max(winProb, 0), 1);
+    loseProb = Math.min(Math.max(loseProb, 0), 1);
+    tieProb = Math.min(Math.max(tieProb, 0), 1);
+
+    return {
+        win: (winProb * 100).toFixed(1),
+        lose: (loseProb * 100).toFixed(1),
+        tie: (tieProb * 100).toFixed(1)
+    };
 }
 
-function updateOpponentControls() {
-    const count = parseInt(document.getElementById('opponentCount').value);
-    initializeOpponents(count);
-    const container = document.getElementById('opponentActions');
-    container.innerHTML = '';
-    opponents.forEach(opponent => {
-        container.appendChild(createOpponentPanel(opponent));
-    });
-    generateOpponentHands(); // Generate opponent hands when updated
+function updateProbabilities() {
+    if (playerHand.length !== 2) return;
+    
+    const probs = document.getElementById('probabilities');
+    let output = '<strong>Probabilidades por nº de oponentes:</strong><br>';
+    
+    for (let i = 1; i <= 4; i++) {
+        const stats = calculateProbabilitiesAgainstOpponents(playerHand, communityCards, i);
+        output += `${i} oponente${i > 1 ? 's' : ''}: V:${stats.win}% D:${stats.lose}% E:${stats.tie}% | `;
+        if (i % 2 === 0) output += '<br>';
+    }
+    
+    probs.innerHTML = output;
 }
 
 function initializeDeck() {
     deck = [];
-    // First create all cards in the desired order
     values.forEach(value => {
         suits.forEach(suit => {
             deck.push(`${value}${suit}`);
@@ -617,33 +490,23 @@ function renderDeck() {
 function toggleCardSelection(card, cardElement) {
     if (cardElement.classList.contains('selected-hand') || 
         cardElement.classList.contains('selected-community')) {
-        // Remove selection
         if (cardElement.classList.contains('selected-hand')) {
             playerHand = playerHand.filter(c => c !== card);
-            currentPhase = 'hand'; // Reset to hand phase if removing hand card
         } else {
             communityCards = communityCards.filter(c => c !== card);
-            // Adjust phase based on remaining community cards
-            if (communityCards.length < 3) currentPhase = 'pre-flop';
-            else if (communityCards.length === 3) currentPhase = 'flop';
-            else if (communityCards.length === 4) currentPhase = 'river';
         }
         cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
     } else {
-        // Add new selection based on current phase
-        if (currentPhase === 'hand' && playerHand.length < 2) {
+        if (playerHand.length < 2) {
             playerHand.push(card);
             cardElement.classList.add('selected-hand');
-            if (playerHand.length === 2) currentPhase = 'pre-flop';
-        } else if (currentPhase === 'pre-flop' && communityCards.length < 3) {
+        } else if (communityCards.length < 3) {
             communityCards.push(card);
             cardElement.classList.add('selected-community', 'pre-flop');
-            if (communityCards.length === 3) currentPhase = 'flop';
-        } else if (currentPhase === 'flop' && communityCards.length === 3) {
+        } else if (communityCards.length === 3) {
             communityCards.push(card);
             cardElement.classList.add('selected-community', 'turn');
-            currentPhase = 'river';
-        } else if (currentPhase === 'river' && communityCards.length === 4) {
+        } else if (communityCards.length === 4) {
             communityCards.push(card);
             cardElement.classList.add('selected-community', 'river');
         }
@@ -651,136 +514,8 @@ function toggleCardSelection(card, cardElement) {
     updateGameState();
 }
 
-// Enhanced possible hands analysis
-function getPossibleHands() {
-    const cards = [...playerHand, ...communityCards];
-    const availableCards = deck.filter(card => !cards.includes(card));
-    const { outs, odds } = calculateOutsAndOdds(cards, availableCards);
-    
-    let possibilities = [];
-    
-    if (odds.flush) {
-        possibilities.push(`Flush draw: ${odds.flush.toFixed(1)}% de chance`);
-    }
-    
-    if (odds.straight) {
-        possibilities.push(`Straight draw: ${odds.straight.toFixed(1)}% de chance`);
-    }
-    
-    if (odds.set) {
-        possibilities.push(`Set draw: ${odds.set.toFixed(1)}% de chance`);
-    }
-    
-    return possibilities.length ? 
-        possibilities.join('\n') : 
-        "Sem sequências significativas no momento";
-}
-
-// Helper function to find straight completion cards
-function findStraightCompletionCards(cards) {
-    const ranks = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
-    const uniqueRanks = [...new Set(ranks)];
-    const possibleRanks = [];
-    
-    for (let i = 0; i < values.length - 4; i++) {
-        const window = uniqueRanks.filter(r => r >= i && r <= i + 4);
-        if (window.length >= 3) {
-            for (let j = i; j <= i + 4; j++) {
-                if (!window.includes(j)) {
-                    possibleRanks.push(values[j]);
-                }
-            }
-        }
-    }
-    
-    return [...new Set(possibleRanks)];
-}
-
-// Enhanced opponent analysis based on actions
-function analyzeOpponentBehavior(opponent, handStrength) {
-    let analysis = `Oponente ${opponent.id}: `;
-    
-    switch(opponent.action) {
-        case 'C':
-            analysis += `• Check sugere: ${
-                handStrength > 0.7 ? "Possível slow play - mão forte" :
-                handStrength > 0.4 ? "Mão mediana ou draw" :
-                "Mão fraca ou esperando ver próxima carta"
-            }\n`;
-            break;
-        case 'A':
-            analysis += `• Aumento sugere: ${
-                opponent.aggression > 2 ? "Jogador muito agressivo - possível blefe" :
-                handStrength > 0.6 ? "Força real na mão" :
-                "Tentando roubar o pote"
-            }\n`;
-            break;
-        case 'P':
-            analysis += `• Pagou sugere: ${
-                handStrength > 0.5 ? "Provavelmente tem uma mão média a forte" :
-                "Pode estar em draw ou com mão marginal"
-            }\n`;
-            break;
-        case 'D':
-            analysis += "• Desistiu - mão fraca ou sem valor\n";
-            break;
-        case 'PT':
-            analysis += `• All-in sugere: ${
-                handStrength > 0.8 ? "Muito provavelmente tem nuts" :
-                handStrength > 0.6 ? "Mão forte ou semi-blefe com draw" :
-                "Possível blefe ou move desesperado"
-            }\n`;
-            break;
-    }
-    
-    return analysis;
-}
-
-// New function for enhanced predicted hands
-function getEnhancedPredictedHands() {
-    let analysis = '';
-    opponents.forEach((opponent, index) => {
-        if (opponent.action === 'D') {
-            analysis += `Oponente ${opponent.id}: Desistiu da mão\n`;
-            return;
-        }
-
-        const opponentCards = opponentHands[index];
-        if (!opponentCards || opponentCards.length === 0) {
-            analysis += `Oponente ${opponent.id}: Cartas desconhecidas\n`;
-            return;
-        }
-
-        const allCards = [...opponentCards, ...communityCards];
-        const handEval = evaluateHand(allCards);
-        let opponentAnalysis = analyzeOpponentBehavior(opponent, handEval.strength);
-        
-        analysis += opponentAnalysis + `• Mão atual: ${handEval.type}\n`;
-        
-        // Análise de draws
-        if (hasStraightDraw(allCards)) {
-            analysis += `• Possível draw para sequência\n`;
-        }
-        
-        const suitCount = {};
-        allCards.forEach(card => {
-            const suit = card.slice(-1);
-            suitCount[suit] = (suitCount[suit] || 0) + 1;
-        });
-        
-        if (Math.max(...Object.values(suitCount)) >= 4) {
-            analysis += `• Possível draw para flush\n`;
-        }
-
-        analysis += '\n';
-    });
-
-    return analysis;
-}
-
-// Inicialização
+// Initialize the game
 initializeDeck();
-updateOpponentControls();
 </script>
 
 </body></html>
