@@ -93,13 +93,6 @@
 </head>
 <body>
     <h2>Análise de Poker Inteligente</h2>
-    <label for="opponentCount">Selecione o número de oponentes (1-4): </label>
-    <select id="opponentCount">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-    </select>
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
@@ -114,16 +107,12 @@
         let playerHand = [];
         let communityCards = [];
         let opponentAggressive = false;
-        let opponents = [];
-        let opponentCount = 1;
     
         const deckElement = document.getElementById('deck');
         const recommendationElement = document.getElementById('recommendation');
         const probabilitiesElement = document.getElementById('probabilities');
         const opponentAnalysisElement = document.getElementById('opponent-analysis');
         const opponentRaiseButton = document.getElementById('opponentRaiseButton');
-        const opponentCountSelect = document.getElementById('opponentCount');
-       
        const oddsTable = {
             "pocketPair": { "trinca": 12.7, "quadra": 0.24 },
             "flushDraw": { "flush": 19.1 },
@@ -135,12 +124,7 @@
             opponentAggressive = true;
             updateGameState();
         });
-
-        opponentCountSelect.addEventListener('change', () => {
-            opponentCount = parseInt(opponentCountSelect.value);
-            resetGame();
-        });
-       
+    
         function initializeDeck() {
             suits.forEach(suit => {
                 values.forEach(value => {
@@ -161,19 +145,19 @@
             });
         }
     
-        function toggleCardSelection(card, cardElement) {
+              function toggleCardSelection(card, cardElement) {
             if (cardElement.classList.contains('selected-hand')) {
                 playerHand = playerHand.filter(c => c !== card);
                 cardElement.classList.remove('selected-hand');
             } else if (communityCards.includes(card)) {
-               communityCards = communityCards.filter(c => c !== card);
-                cardElement.classList.remove('selected-community');
+                // Remove a carta da lista de comunitárias
+                communityCards = communityCards.filter(c => c !== card);
+                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
             } else if (playerHand.length < 2) {
                 playerHand.push(card);
                 cardElement.classList.add('selected-hand');
             } else if (communityCards.length < 5) {
-                 communityCards.push(card);
-                cardElement.classList.add('selected-community');
+                communityCards.push(card);
         
                 // Define a cor específica com base no índice
                 let colorClass = '';
@@ -190,14 +174,6 @@
             updateGameState();
         }
 
-       function resetGame() {
-            playerHand = [];
-            communityCards = [];
-            opponents = Array(opponentCount).fill(null).map(() => []);
-            initializeDeck();
-            updateGameState();
-        }
-       
        function evaluateOdds(hand) {
             const handType = evaluateHand(hand);
             const odds = {
@@ -233,22 +209,11 @@
             if (Object.values(rankCounts).includes(2)) return "Par";
             return "Carta Alta";
         }
-
-       function evaluateGameState() {
-            const playerStrength = evaluateHand([...playerHand, ...communityCards]);
-            const opponentStrengths = opponents.map(opp => evaluateHand([...opp, ...communityCards]));
-            return { playerStrength, opponentStrengths };
-        }
-
-       function evaluateHand(cards) {
-            // Função para avaliar a força da mão (similar ao código original)
-            return "Implementar lógica de força da mão";
-        }
-       
+    
         function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
             const opponentPossibleHands = [];
-            const totalSimulations = 100000;
+            const totalSimulations = 10000;
     
             for (let i = 0; i < totalSimulations; i++) {
                 const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
@@ -324,7 +289,6 @@
             const handStrength = evaluateHand(allCards);
             const opponentPossibleHands = simulateOpponentHands();
             const probabilities = calculateWinningProbability(opponentPossibleHands);
-            const recommendations = analyzeResults(results);
             const odds = evaluateOdds(allCards);
             const recommendation = getRecommendation(
                 handStrength,
@@ -332,23 +296,13 @@
                 probabilities.playerWinRate
             );
     
-             recommendationElement.textContent = `Recomendação: ${recommendations.advice}`;
-            probabilitiesElement.textContent = `Probabilidades estimadas: ${recommendations.probabilities}`;
+            recommendationElement.textContent = `Recomendação: Analise as odds para ${handStrength}.`;
+            probabilitiesElement.textContent = `Probabilidades estimadas: ${odds}.`;
             opponentAnalysisElement.textContent = `
                 Oponente vitória: ${probabilities.opponentWinRate}%,
                 Você vitória: ${probabilities.playerWinRate}%,
                 Empates: ${probabilities.drawRate}%.`;
         }
-       function analyzeResults(results) {
-            // Analisa os resultados das simulações e dá recomendações.
-            return {
-                advice: "Baseado nas simulações.",
-                probabilities: "Probabilidades detalhadas.",
-                opponentAnalysis: "Descrição detalhada."
-            };
-        }
-
-        resetGame();
     
         initializeDeck();
 </script>
