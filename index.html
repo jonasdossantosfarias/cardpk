@@ -89,79 +89,44 @@
         button:hover {
             background-color: #d35400;
         }
-         #log {
-            margin: 20px;
-            width: 90%;
-            height: 150px;
-            overflow-y: auto;
-            background-color: #ffffff;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
-            padding: 10px;
-        }
     </style>
 </head>
 <body>
     <h2>Análise de Poker Inteligente</h2>
-    <div id="log" style="margin: 20px; width: 90%; height: 150px; overflow-y: auto; background-color: #ffffff; border: 1px solid #ced4da; border-radius: 8px; padding: 10px;"></div>
     <div id="recommendation" style="margin: 15px; font-size: 16px; color: #343a40;">Recomendação: </div>
     <div id="probabilities" style="font-size: 14px; color: #6c757d;">Combinações possíveis: </div>
     <div id="opponent-analysis" style="font-size: 14px; color: #6c757d;">Análise do adversário: </div>
     <button id="opponentRaiseButton">Oponente aumentou a aposta</button>
     <div class="deck" id="deck"></div>
-   <script>const suits = ['♥', '♦', '♣', '♠'];
-    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    let deck = [];
-    let playerHand = [];
-    let communityCards = [];
-    let opponentAggressive = false;
+   <script>
+        const suits = ['♥', '♦', '♣', '♠'];
+        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        let deck = [];
+        let playerHand = [];
+        let communityCards = [];
+        let opponentAggressive = false;
     
-    const deckElement = document.getElementById('deck');
-    const recommendationElement = document.getElementById('recommendation');
-    const probabilitiesElement = document.getElementById('probabilities');
-    const opponentAnalysisElement = document.getElementById('opponent-analysis');
-    const opponentRaiseButton = document.getElementById('opponentRaiseButton');
-    const logElement = document.getElementById('log');
-    const saveLogButton = document.getElementById('saveLogButton');
+        const deckElement = document.getElementById('deck');
+        const recommendationElement = document.getElementById('recommendation');
+        const probabilitiesElement = document.getElementById('probabilities');
+        const opponentAnalysisElement = document.getElementById('opponent-analysis');
+        const opponentRaiseButton = document.getElementById('opponentRaiseButton');
     
-    // Adiciona entradas no log
-    function addToLog(message) {
-        const logEntry = document.createElement('div');
-        logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
-        logElement.appendChild(logEntry);
-        logElement.scrollTop = logElement.scrollHeight;
-    }
-    
-    // Detecta aumento de aposta do oponente
-    opponentRaiseButton.addEventListener('click', () => {
-        opponentAggressive = true;
-        addToLog("Oponente aumentou a aposta.");
-        updateGameState();
-    });
-    
-    // Função para salvar o log como arquivo .txt
-    saveLogButton.addEventListener('click', () => {
-        const logData = logElement.innerText;
-        const blob = new Blob([logData], { type: 'text/plain' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'poker-log.txt';
-        link.click();
-    });
-    
-    // Inicializa o baralho
-    function initializeDeck() {
-        deck = [];
-        suits.forEach(suit => {
-            values.forEach(value => {
-                deck.push(`${value}${suit}`);
-            });
+        opponentRaiseButton.addEventListener('click', () => {
+            opponentAggressive = true;
+            updateGameState();
         });
-        renderDeck();
-    }
     
-    // Renderiza as cartas na interface
-    function renderDeck() {
+        function initializeDeck() {
+            suits.forEach(suit => {
+                values.forEach(value => {
+                    deck.push(`${value}${suit}`);
+                });
+            });
+            renderDeck();
+        }
+    
+        function renderDeck() {
             deckElement.innerHTML = '';
             deck.forEach(card => {
                 const cardElement = document.createElement('div');
@@ -172,78 +137,158 @@
             });
         }
     
-    // Seleciona ou desmarca cartas
-    function toggleCardSelection(card, cardElement) {
-        if (cardElement.classList.contains('selected-hand')) {
-            playerHand = playerHand.filter(c => c !== card);
-            cardElement.classList.remove('selected-hand');
-            addToLog(`Carta ${card} removida da mão.`);
-        } else if (communityCards.includes(card)) {
-            communityCards = communityCards.filter(c => c !== card);
-            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
-            addToLog(`Carta ${card} removida das comunitárias.`);
-        } else if (playerHand.length < 2) {
-            playerHand.push(card);
-            cardElement.classList.add('selected-hand');
-            addToLog(`Carta ${card} adicionada à mão.`);
-        } else if (communityCards.length < 5) {
-            communityCards.push(card);
-            let colorClass = '';
-            if (communityCards.length <= 3) colorClass = 'selected-community pre-flop';
-            else if (communityCards.length === 4) colorClass = 'selected-community turn';
-            else if (communityCards.length === 5) colorClass = 'selected-community river';
-            cardElement.className = `card ${colorClass}`;
-            addToLog(`Carta ${card} adicionada às comunitárias.`);
+              function toggleCardSelection(card, cardElement) {
+            if (cardElement.classList.contains('selected-hand')) {
+                playerHand = playerHand.filter(c => c !== card);
+                cardElement.classList.remove('selected-hand');
+            } else if (communityCards.includes(card)) {
+                // Remove a carta da lista de comunitárias
+                communityCards = communityCards.filter(c => c !== card);
+                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            } else if (playerHand.length < 2) {
+                playerHand.push(card);
+                cardElement.classList.add('selected-hand');
+            } else if (communityCards.length < 5) {
+                communityCards.push(card);
+        
+                // Define a cor específica com base no índice
+                let colorClass = '';
+                if (communityCards.length <= 3) {
+                    colorClass = 'selected-community pre-flop'; // As 3 primeiras cartas são do pré-flop
+                } else if (communityCards.length === 4) {
+                    colorClass = 'selected-community turn'; // Turn (próxima carta)
+                } else if (communityCards.length === 5) {
+                    colorClass = 'selected-community river'; // River (última carta)
+                }
+        
+                cardElement.className = `card ${colorClass}`;
+            }
+            updateGameState();
         }
-        updateGameState();
-    }
     
-    // Atualiza o estado do jogo
-    function updateGameState() {
-        if (playerHand.length < 2) {
-            recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
-            probabilitiesElement.textContent = "";
-            opponentAnalysisElement.textContent = "";
-            addToLog("Mão incompleta. Aguarde mais cartas serem selecionadas.");
-            return;
+        function evaluateHand(cards) {
+            const ranks = cards.map(card => card.slice(0, -1));
+            const suits = cards.map(card => card.slice(-1));
+            const rankCounts = {};
+            const suitCounts = {};
+    
+            ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
+            suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+    
+            const isFlush = Object.values(suitCounts).some(count => count >= 5);
+            const sortedRanks = ranks
+                .map(rank => isNaN(rank) ? (rank === 'A' ? 1 : rank === 'K' ? 13 : rank === 'Q' ? 12 : 11) : parseInt(rank))
+                .sort((a, b) => a - b);
+            const isStraight = sortedRanks.some((rank, index, arr) => 
+                index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
+            );
+    
+            if (isFlush && isStraight) return "Straight Flush";
+            if (Object.values(rankCounts).includes(4)) return "Quadra";
+            if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
+            if (isFlush) return "Flush";
+            if (isStraight) return "Sequência";
+            if (Object.values(rankCounts).includes(3)) return "Trinca";
+            if (Object.values(rankCounts).filter(count => count === 2).length === 2) return "Dois Pares";
+            if (Object.values(rankCounts).includes(2)) return "Par";
+            return "Carta Alta";
         }
-        const allCards = [...playerHand, ...communityCards];
-        const handStrength = evaluateHand(allCards);
-        addToLog(`Mão avaliada: ${handStrength}`);
-    }
     
-    // Avalia a força da mão
-    function evaluateHand(cards) {
-        const ranks = cards.map(card => card.slice(0, -1));
-        const suits = cards.map(card => card.slice(-1));
-        const rankCounts = {};
-        const suitCounts = {};
+        function simulateOpponentHands() {
+            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
+            const opponentPossibleHands = [];
+            const totalSimulations = 10000;
     
-        ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
-        suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
+            for (let i = 0; i < totalSimulations; i++) {
+                const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
+                const opponentHand = shuffledDeck.slice(0, 2);
+                const opponentCards = [...opponentHand, ...communityCards];
+                opponentPossibleHands.push({
+                    hand: opponentHand,
+                    strength: evaluateHand(opponentCards),
+                });
+            }
     
-        const isFlush = Object.values(suitCounts).some(count => count >= 5);
-        const sortedRanks = ranks
-            .map(rank => isNaN(rank) ? (rank === 'A' ? 14 : rank === 'K' ? 13 : rank === 'Q' ? 12 : 11) : parseInt(rank))
-            .sort((a, b) => a - b);
-        const isStraight = sortedRanks.some((rank, index, arr) => 
-            index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
-        );
+            return opponentPossibleHands;
+        }
     
-        if (isFlush && isStraight) return "Straight Flush";
-        if (Object.values(rankCounts).includes(4)) return "Quadra";
-        if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
-        if (isFlush) return "Flush";
-        if (isStraight) return "Sequência";
-        if (Object.values(rankCounts).includes(3)) return "Trinca";
-        if (Object.values(rankCounts).filter(count => count === 2).length === 2) return "Dois Pares";
-        if (Object.values(rankCounts).includes(2)) return "Par";
-        return "Carta Alta";
-    }
+        function calculateWinningProbability(opponentPossibleHands) {
+            let playerWins = 0, opponentWins = 0, draws = 0;
+            const totalSimulations = opponentPossibleHands.length;
     
-    // Inicializa o jogo
-    initializeDeck();
-
+            opponentPossibleHands.forEach(opponent => {
+                const playerBest = evaluateHand([...playerHand, ...communityCards]);
+                const opponentBest = opponent.strength;
+    
+                if (compareHands(playerBest, opponentBest) > 0) {
+                    playerWins++;
+                } else if (compareHands(opponentBest, playerBest) > 0) {
+                    opponentWins++;
+                } else {
+                    draws++;
+                }
+            });
+    
+            return {
+                playerWinRate: (playerWins / totalSimulations * 100).toFixed(2),
+                opponentWinRate: (opponentWins / totalSimulations * 100).toFixed(2),
+                drawRate: (draws / totalSimulations * 100).toFixed(2),
+            };
+        }
+    
+        function compareHands(hand1, hand2) {
+            const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+            return ranking.indexOf(hand1) - ranking.indexOf(hand2);
+        }
+    
+        function getRecommendation(handStrength, opponentWinRate, playerWinRate) {
+            const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
+    
+            if (handStrength === "Carta Alta" || handStrength === "Sem Combinação") {
+                if (opponentWinRate > playerWinRate || opponentAggressive) {
+                    return "Recomendação: Desistir (Fold) devido à mão fraca e alta agressividade do oponente.";
+                } else {
+                    return "Recomendação: Pague (Call) com cautela.";
+                }
+            }
+    
+            if (strongHands.includes(handStrength) && playerWinRate > opponentWinRate) {
+                return "Recomendação: Aposte agressivamente (Raise ou All-in).";
+            }
+            if (opponentWinRate >= 50) {
+                return "Recomendação: Cuidado! Considere desistir (Fold).";
+            }
+            return "Recomendação: Passe (Check) ou Pague (Call).";
+        }
+    
+        function updateGameState() {
+            if (playerHand.length < 2) {
+                recommendationElement.textContent = "Recomendação: Selecione 2 cartas para sua mão.";
+                probabilitiesElement.textContent = "";
+                opponentAnalysisElement.textContent = "";
+                return;
+            }
+    
+            const allCards = [...playerHand, ...communityCards];
+            const handStrength = evaluateHand(allCards);
+            const opponentPossibleHands = simulateOpponentHands();
+            const probabilities = calculateWinningProbability(opponentPossibleHands);
+    
+            const recommendation = getRecommendation(
+                handStrength,
+                probabilities.opponentWinRate,
+                probabilities.playerWinRate
+            );
+    
+            recommendationElement.textContent = recommendation;
+            probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
+            opponentAnalysisElement.textContent = `
+                Oponente vitória: ${probabilities.opponentWinRate}%,
+                Você vitória: ${probabilities.playerWinRate}%,
+                Empates: ${probabilities.drawRate}%.`;
+        }
+    
+        initializeDeck();
 </script>
 </body>
 </html>
