@@ -272,15 +272,20 @@
             const allCards = [...playerHand, ...communityCards];
             const handStrength = evaluateHand(allCards);
             const opponentSimulations = simulateOpponentHands();
+            const probabilities = calculateWinningProbability(opponentSimulations);
         
-            const recommendation = getRecommendation(handStrength, opponentSimulations.opponentWinRate);
+            const recommendation = getRecommendation(
+                handStrength,
+                probabilities.opponentWinRate,
+                probabilities.playerWinRate
+            );
         
             recommendationElement.textContent = recommendation;
             probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
             opponentAnalysisElement.textContent = `
-                Oponente vitória: ${opponentSimulations.opponentWinRate}%,
-                Você vitória: ${opponentSimulations.playerWinRate}%,
-                Empates: ${opponentSimulations.drawRate}%.`;
+                Oponente vitória: ${probabilities.opponentWinRate}%,
+                Você vitória: ${probabilities.playerWinRate}%,
+                Empates: ${probabilities.drawRate}%.`;
         }
 
         initializeDeck();
