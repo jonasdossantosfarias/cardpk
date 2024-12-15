@@ -228,14 +228,17 @@
         function getRecommendation(handStrength, opponentWinRate) {
             const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
             if (opponentAggressive) opponentWinRate += 20; // Ajuste se o oponente está sendo agressivo
-
+        
             if (strongHands.includes(handStrength) && opponentWinRate < 50) {
-                return "Recomendação: Aposte agressivamente (Raise ou All-in).";
+                return "Recomendação: Aposte tudo (All-play) ou aumente a aposta (Raise)!";
             }
             if (opponentWinRate >= 50) {
-                return "Recomendação: Cuidado! Considere desistir (Fold).";
+                return "Recomendação: Desistir (Fold).";
             }
-            return "Recomendação: Jogue com cautela (Call ou Check).";
+            if (handStrength === "Par" || handStrength === "Dois Pares") {
+                return "Recomendação: Pague (Call) para continuar na rodada.";
+            }
+            return "Recomendação: Passe (Check) e jogue com cautela.";
         }
 
         function updateGameState() {
