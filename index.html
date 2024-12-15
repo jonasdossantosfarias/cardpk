@@ -553,9 +553,54 @@ function getDetailedOpponentAnalysis() {
         };
         
         let analysis = `Oponente ${opponent.id}:<br>`;
-        analysis += `- ${actionMap[opponent.action]}<br>`;
+        analysis += `- Ação atual: ${actionMap[opponent.action]}<br>`;
+
+        // Análise baseada na ação do oponente
+        let perfil = '';
+        if (opponent.action === 'raise') {
+            perfil = 'Jogador agressivo, provavelmente com mão forte';
+            if (opponent.aggression > 1) {
+                perfil += '. Histórico de aumentos frequentes';
+            }
+        } else if (opponent.action === 'all-in') {
+            perfil = 'Muito agressivo - pode ter uma mão muito forte ou estar blefando';
+        } else if (opponent.action === 'call') {
+            perfil = 'Jogador cauteloso, provavelmente com mão média a forte';
+        } else if (opponent.action === 'check') {
+            perfil = 'Jogador passivo, pode estar esperando para ver mais cartas';
+        } else if (opponent.action === 'fold') {
+            perfil = 'Jogador conservador ou com mão fraca';
+        }
+
+        // Adiciona nível de agressividade
+        let nivelAgressao = '';
+        if (opponent.aggression > 2) {
+            nivelAgressao = 'Muito agressivo';
+        } else if (opponent.aggression > 0) {
+            nivelAgressao = 'Moderadamente agressivo';
+        } else {
+            nivelAgressao = 'Passivo';
+        }
+
+        analysis += `- Perfil: ${perfil}<br>`;
+        analysis += `- Comportamento: ${nivelAgressao}<br>`;
+        
+        // Análise da força provável da mão
+        let forcaProvavel = '';
+        if (opponent.action === 'raise' || opponent.action === 'all-in') {
+            forcaProvavel = 'Alta probabilidade de par alto ou cartas altas (AK, AQ)';
+        } else if (opponent.action === 'call') {
+            forcaProvavel = 'Provável par médio ou cartas conectadas';
+        } else if (opponent.action === 'check') {
+            forcaProvavel = 'Possível draw ou mão mediana';
+        } else if (opponent.action === 'fold') {
+            forcaProvavel = 'Mão fraca';
+        }
+        
+        analysis += `- Força provável: ${forcaProvavel}`;
+        
         return analysis;
-    }).join('<br>');
+    }).join('<br><br>');
 }
 
 // Inicialização
