@@ -217,7 +217,15 @@
         
         function compareHands(hand1, hand2) {
             const ranking = ["Carta Alta", "Par", "Dois Pares", "Trinca", "Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
-            return ranking.indexOf(hand1) - ranking.indexOf(hand2);
+            const rank1 = ranking.indexOf(hand1);
+            const rank2 = ranking.indexOf(hand2);
+        
+            if (rank1 !== rank2) {
+                return rank1 - rank2;
+            }
+        
+            // Adicionar lógica para desempate baseado nos valores das cartas (ex.: High Card)
+            return hand1.highestCard - hand2.highestCard; // Exemplo de estrutura para desempate
         }
 
         function calculateWinningProbability(opponentPossibleHands) {
