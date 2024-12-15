@@ -58,6 +58,22 @@
         .card:hover {
             transform: scale(1.1);
         }
+        .selected-hand {
+            background-color: #3498db;
+            color: white;
+        }
+        .selected-community {
+            background-color: #e67e22;
+            color: white;
+        }
+        .selected-turn {
+            background-color: #b39ddb;
+            color: white;
+        }
+        .selected-river {
+            background-color: #ef9a9a;
+            color: white;
+        }
         button {
             padding: 10px 15px;
             font-size: 16px;
@@ -97,6 +113,8 @@
         let deck = [];
         let playerHand = [];
         let communityCards = [];
+        let turnCard = null;
+        let riverCard = null;
         let opponents = {};
 
         const deckElement = document.getElementById('deck');
@@ -138,12 +156,24 @@
             } else if (cardElement.classList.contains('selected-community')) {
                 communityCards = communityCards.filter(c => c !== card);
                 cardElement.classList.remove('selected-community');
+            } else if (cardElement.classList.contains('selected-turn')) {
+                turnCard = null;
+                cardElement.classList.remove('selected-turn');
+            } else if (cardElement.classList.contains('selected-river')) {
+                riverCard = null;
+                cardElement.classList.remove('selected-river');
             } else if (playerHand.length < 2) {
                 playerHand.push(card);
                 cardElement.classList.add('selected-hand');
-            } else if (communityCards.length < 5) {
+            } else if (communityCards.length < 3) {
                 communityCards.push(card);
                 cardElement.classList.add('selected-community');
+            } else if (!turnCard) {
+                turnCard = card;
+                cardElement.classList.add('selected-turn');
+            } else if (!riverCard) {
+                riverCard = card;
+                cardElement.classList.add('selected-river');
             }
             updateGameState();
         }
@@ -177,7 +207,7 @@
         }
 
         function simulateHands() {
-            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
+            const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards, turnCard, riverCard].includes(card));
             let simulations = {
                 playerWins: 0,
                 opponentWins: 0,
@@ -185,9 +215,9 @@
             };
             for (let i = 0; i < 10000; i++) {
                 const shuffledDeck = [...remainingDeck].sort(() => Math.random() - 0.5);
-                const playerBest = evaluateHand([...playerHand, ...communityCards]);
+                const playerBest = evaluateHand([...playerHand, ...communityCards, turnCard, riverCard]);
                 const opponentHands = Object.keys(opponents).map(() => shuffledDeck.splice(0, 2));
-                const opponentBest = opponentHands.map(hand => evaluateHand([...hand, ...communityCards]));
+                const opponentBest = opponentHands.map(hand => evaluateHand([...hand, ...communityCards, turnCard, riverCard]));
                 const results = compareHands(playerBest, opponentBest);
 
                 if (results.player > results.opponent) simulations.playerWins++;
