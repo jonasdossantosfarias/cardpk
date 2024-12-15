@@ -18,8 +18,9 @@
         margin: 20px 0 10px 0;
     }
     .deck {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(13, minmax(40px, 1fr));
+        grid-template-rows: repeat(4, auto);
         gap: 8px;
         justify-content: center;
         padding: 10px;
@@ -28,21 +29,38 @@
         border-radius: 8px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         margin-top: 20px;
+        width: 95%;
+        max-width: 1200px;
     }
     .card {
-        width: 50px;
-        height: 70px;
+        width: 100%;
+        aspect-ratio: 0.7;
+        min-width: 30px;
+        max-width: 50px;
+        height: auto;
         border-radius: 5px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         display: flex;
         justify-content: center;
         align-items: center;
         font-weight: bold;
-        font-size: 14px;
+        font-size: clamp(10px, 2vw, 14px);
         cursor: pointer;
-        transition: transform 0.2s ease-in-out;
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        position: relative;
+        overflow: hidden;
         background-color: #ffffff;
         border: 1px solid #ced4da;
+    }
+    .card:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%);
+        pointer-events: none;
     }
     .card.red { color: #e74c3c; }
     .card.black { color: #212529; }
@@ -53,18 +71,26 @@
     .selected-hand {
         background-color: #3498db;
         color: white !important;
+        border-color: #2980b9;
+        box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
     }
     .selected-community.pre-flop {
         background-color: #e67e22;
         color: white !important;
+        border-color: #d35400;
+        box-shadow: 0 4px 8px rgba(230, 126, 34, 0.3);
     }
     .selected-community.turn {
         background-color: #9b59b6;
         color: white !important;
+        border-color: #8e44ad;
+        box-shadow: 0 4px 8px rgba(155, 89, 182, 0.3);
     }
     .selected-community.river {
         background-color: #e74c3c;
         color: white !important;
+        border-color: #c0392b;
+        box-shadow: 0 4px 8px rgba(231, 76, 60, 0.3);
     }
     .controls {
         margin: 20px 0;
@@ -72,12 +98,16 @@
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        width: 95%;
+        max-width: 800px;
     }
     .opponent-controls {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
         margin: 10px 0;
+        width: 95%;
+        max-width: 800px;
     }
     .opponent-panel {
         background: #f8f9fa;
@@ -107,14 +137,31 @@
         background-color: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        width: 80%;
-        max-width: 600px;
+        width: 95%;
+        max-width: 800px;
     }
     select {
         padding: 5px 10px;
         border-radius: 5px;
         border: 1px solid #ced4da;
         margin-right: 10px;
+    }
+    @media (max-width: 768px) {
+        .deck {
+            gap: 4px;
+            padding: 5px;
+        }
+        
+        .card {
+            min-width: 25px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .deck {
+            gap: 2px;
+            padding: 3px;
+        }
     }
 </style>
 </head>
@@ -145,8 +192,23 @@ let deck = [];
 let playerHand = [];
 let communityCards = [];
 let opponents = [];
-let currentPhase = 'hand'; // Can be: 'hand', 'opponent-hands', 'pre-flop', 'turn', 'river'
+let currentPhase = 'hand'; // Can be: 'hand', 'pre-flop', 'flop', 'river'
 let opponentHands = [];
+
+let blinds = {
+    small: 10,
+    big: 20
+};
+
+function getBlindsString() {
+    return `Small: ${blinds.small}, Big: ${blinds.big}`;
+}
+
+function getKickersString(cards) {
+    if (cards.length < 2) return [];
+    const ranks = cards.map(card => card.slice(0, -1));
+    return ranks.sort((a,b) => values.indexOf(b) - values.indexOf(a)).slice(1);
+}
 
 function isStraightFlush(cards) {
     return isFlush(cards) && isStraight(cards);
@@ -185,138 +247,124 @@ function isFullHouse(cards) {
     return Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2);
 }
 
-function getHandStrength(cards) {
-    if (!cards || cards.length < 2) return 0;
-    const values = cards.map(card => card.slice(0, -1));
-    const isPair = values[0] === values[1];
-    const isHighCard = values.includes('A') || values.includes('K') || values.includes('Q');
-    const isConnector = Math.abs(values.indexOf(values[0]) - values.indexOf(values[1])) === 1;
-    
-    if (isPair) return values.includes('A') ? 0.9 : values.includes('K') ? 0.8 : 0.7;
-    if (isHighCard) return 0.6;
-    if (isConnector) return 0.5;
-    return 0.3;
-}
-
-function hasStraightDraw(cards) {
-    if (cards.length < 3) return false;
-    
-    // Convert cards to ranks and sort them
-    const ranks = cards.map(card => values.indexOf(card.slice(0, -1)))
-                      .sort((a, b) => a - b);
-    
-    // Remove duplicates
-    const uniqueRanks = [...new Set(ranks)];
-    
-    // Check for gaps and potential straights
-    let consecutiveCount = 1;
-    let maxConsecutive = 1;
-    
-    for (let i = 1; i < uniqueRanks.length; i++) {
-        if (uniqueRanks[i] - uniqueRanks[i-1] === 1) {
-            consecutiveCount++;
-            maxConsecutive = Math.max(maxConsecutive, consecutiveCount);
-        } else if (uniqueRanks[i] - uniqueRanks[i-1] === 2) {
-            // Found a one-card gap
-            consecutiveCount = 1;
-        } else {
-            consecutiveCount = 1;
-        }
-    }
-    
-    // Special case for Ace-low straight draw
-    if (uniqueRanks.includes(values.length - 1)) { // If we have an Ace
-        const lowStraightDraw = [0, 1, 2, 3].some(rank => uniqueRanks.includes(rank));
-        if (lowStraightDraw) return true;
-    }
-    
-    // Return true if we have 4 consecutive cards or 3 consecutive with gaps that could make a straight
-    return maxConsecutive >= 3 || (uniqueRanks.length >= 4 && uniqueRanks[uniqueRanks.length-1] - uniqueRanks[0] <= 4);
-}
-
-function generateOpponentHand() {
-    let availableCards = deck.filter(card => 
-        !playerHand.includes(card) && 
-        !communityCards.includes(card) &&
-        !opponentHands.flat().includes(card)
-    );
-    
-    // Generate likely hands based on opponent actions
-    let hand = [];
-    const randomIndex = () => Math.floor(Math.random() * availableCards.length);
-    
-    for(let i = 0; i < 2; i++) {
-        let cardIndex = randomIndex();
-        hand.push(availableCards[cardIndex]);
-        availableCards.splice(cardIndex, 1);
-    }
-    
-    return hand;
-}
-
-// Add this function to generate hands for all opponents
-function generateOpponentHands() {
-    opponentHands = [];
-    const opponentCount = parseInt(document.getElementById('opponentCount').value);
-    
-    for(let i = 0; i < opponentCount; i++) {
-        opponentHands.push(generateOpponentHand());
-    }
-}
-
-function predictOpponentHands() {
-    return opponents.map((opponent, index) => {
-        let handRange = '';
-        let predictedCards = [];
-        
-        if (opponentHands[index]) {
-            predictedCards = opponentHands[index];
-        }
-        
-        if (opponent.action === 'raise' || opponent.action === 'all-in') {
-            handRange = 'Provavelmente par alto ou AK/AQ';
-        } else if (opponent.action === 'call') {
-            handRange = 'Par médio ou cartas conectadas';
-        } else if (opponent.action === 'check') {
-            handRange = 'Mão mediana ou possibilidade de sequência';
-        } else if (opponent.action === 'fold') {
-            handRange = 'Mão fraca';
-        }
-        
-        return `Oponente ${opponent.id}: ${handRange}` + 
-               (predictedCards.length ? ` (Possíveis cartas: ${predictedCards.join(', ')})` : '');
-    }).join('\n');
-}
-
 function evaluateHand(cards) {
     if (cards.length < 2) return { type: "Sem cartas suficientes", strength: 0 };
 
-    if (isRoyalFlush(cards)) return { type: "Royal Flush", strength: 1 };
-    if (isStraightFlush(cards)) return { type: "Straight Flush", strength: 0.95 };
-    if (isFullHouse(cards)) return { type: "Full House", strength: 0.85 };
-    if (isFlush(cards)) return { type: "Flush", strength: 0.8 };
-    if (isStraight(cards)) return { type: "Sequência", strength: 0.75 };
-
     const ranks = cards.map(card => card.slice(0, -1));
+    const suits = cards.map(card => card.slice(-1));
     const rankCounts = {};
     ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
 
-    const maxCount = Math.max(...Object.values(rankCounts));
-
-    if (maxCount === 4) return { type: "Poker", strength: 0.9 };
-    if (maxCount === 3) return { type: "Trinca", strength: 0.7 };
-
-    const pairCount = Object.values(rankCounts).filter(count => count === 2).length;
-    if (pairCount === 2) return { type: "Dois Pares", strength: 0.6 };
-    if (pairCount === 1) {
-        const pairRank = Object.entries(rankCounts).find(([_, count]) => count === 2)[0];
-        const isHighPair = ['A', 'K', 'Q', 'J'].includes(pairRank);
-        return { type: "Um Par", strength: isHighPair ? 0.5 : 0.4 };
+    // Avaliações mais detalhadas
+    if (isRoyalFlush(cards)) return { 
+        type: "Royal Flush", 
+        strength: 1, 
+        description: "Mão mais forte possível! Considere slow play apenas se houver muita ação" 
+    };
+    
+    if (isStraightFlush(cards)) return { 
+        type: "Straight Flush", 
+        strength: 0.95, 
+        description: "Mão monstruosa! Maximize o valor do pote" 
+    };
+    
+    const fourKind = Object.entries(rankCounts).find(([_, count]) => count === 4);
+    if (fourKind) {
+        return { 
+            type: "Poker", 
+            strength: 0.9,
+            description: `Poker de ${fourKind[0]}s - Mão dominante, controle o tamanho do pote`
+        };
     }
 
-    const hasAce = ranks.includes('A');
-    const hasKing = ranks.includes('K');
-    return { type: "Carta Alta", strength: hasAce ? 0.3 : hasKing ? 0.2 : 0.1 };
+    if (isFullHouse(cards)) {
+        const threeKind = Object.entries(rankCounts).find(([_, count]) => count === 3);
+        const pair = Object.entries(rankCounts).find(([_, count]) => count === 2);
+        return { 
+            type: "Full House", 
+            strength: 0.85,
+            description: `Full House de ${threeKind[0]}s com carta secundária de ${pair[0]}s - Mão muito forte contra ranges`
+        };
+    }
+
+    if (isFlush(cards)) {
+        const flushCards = cards.filter(card => card.endsWith(suits[0]));
+        const highCard = Math.max(...flushCards.map(card => values.indexOf(card.slice(0, -1))));
+        return { 
+            type: "Flush", 
+            strength: 0.8,
+            description: `Flush de ${suits[0]} com ${values[highCard]} alta - Forte, mas vulnerável a Full Houses`
+        };
+    }
+
+    if (isStraight(cards)) {
+        const highCard = Math.max(...ranks.map(r => values.indexOf(r)));
+        return { 
+            type: "Sequência", 
+            strength: 0.75,
+            description: `Sequência até ${values[highCard]} - Mão forte mas vulnerável a Flushes`
+        };
+    }
+
+    const threeKind = Object.entries(rankCounts).find(([_, count]) => count === 3);
+    if (threeKind) {
+        const kickers = ranks.filter(r => r !== threeKind[0]).sort((a,b) => values.indexOf(b) - values.indexOf(a));
+        return { 
+            type: "Trinca", 
+            strength: 0.7,
+            description: `Trinca de ${threeKind[0]}s com cartas secundárias ${kickers.slice(0,2).join(', ')}`
+        };
+    }
+
+    const pairs = Object.entries(rankCounts).filter(([_, count]) => count === 2);
+    if (pairs.length === 2) {
+        const orderedPairs = pairs.sort((a,b) => values.indexOf(b[0]) - values.indexOf(a[0]));
+        const kicker = ranks.find(r => !orderedPairs.find(p => p[0] === r));
+        return { 
+            type: "Dois Pares", 
+            strength: values.indexOf(orderedPairs[0][0]) > 10 ? 0.65 : 0.6,
+            description: `Dois pares: ${orderedPairs[0][0]}s e ${orderedPairs[1][0]}s com carta secundária ${kicker}`
+        };
+    }
+
+    if (pairs.length === 1) {
+        const pairRank = pairs[0][0];
+        const kickers = ranks.filter(r => r !== pairRank)
+            .sort((a,b) => values.indexOf(b) - values.indexOf(a));
+        const isHighPair = values.indexOf(pairRank) >= values.indexOf('J');
+        const isMediumPair = values.indexOf(pairRank) >= values.indexOf('8');
+        return { 
+            type: "Um Par", 
+            strength: isHighPair ? 0.5 : (isMediumPair ? 0.45 : 0.4),
+            description: `Par de ${pairRank}s com cartas secundárias ${kickers.join(', ')} - ${
+                isHighPair ? 'Par alto' : (isMediumPair ? 'Par médio' : 'Par baixo')}`
+        };
+    }
+
+    // Carta alta com análise completa
+    const sortedRanks = [...new Set(ranks)]
+        .sort((a,b) => values.indexOf(b) - values.indexOf(a));
+    const highCard = sortedRanks[0];
+    const strength = values.indexOf(highCard) / values.length;
+    
+    let description = `${highCard} alta com `;
+    if (sortedRanks.length > 1) {
+        description += `cartas secundárias ${sortedRanks.slice(1).join(', ')} - `;
+    }
+    
+    if (values.indexOf(highCard) >= values.indexOf('Q')) {
+        description += 'Carta alta premium';
+    } else if (values.indexOf(highCard) >= values.indexOf('J')) {
+        description += 'Carta alta marginal';
+    } else {
+        description += 'Carta alta muito fraca';
+    }
+
+    return { 
+        type: "Carta Alta", 
+        strength: strength * 0.35, // Reduzido para refletir melhor a fraqueza
+        description: description
+    };
 }
 
 function calculateWinProbability() {
@@ -328,17 +376,17 @@ function calculateWinProbability() {
     probability += positionBonus;
 
     opponents.forEach((opponent, index) => {
-        if (opponent.action === 'raise') probability *= 0.8;
-        if (opponent.action === 'all-in') probability *= 0.6;
-        if (opponent.action === 'fold') probability *= 1.2;
+        if (opponent.action === 'A') probability *= 0.8;
+        if (opponent.action === 'PT') probability *= 0.6;
+        if (opponent.action === 'D') probability *= 1.2;
         probability *= (1 - (opponent.aggression * 0.1));
 
-        if (opponent.action === 'raise' && index < 2) {
+        if (opponent.action === 'A' && index < 2) {
             probability *= 0.9;
         }
     });
 
-    const activeOpponents = opponents.filter(o => o.action !== 'fold').length;
+    const activeOpponents = opponents.filter(o => o.action !== 'D').length;
     probability *= Math.pow(0.8, activeOpponents);
 
     return Math.min(Math.max(probability, 0), 1);
@@ -348,56 +396,163 @@ function updateGameState() {
     if (playerHand.length === 2) {
         const probability = calculateWinProbability();
         const handEval = evaluateHand([...playerHand, ...communityCards]);
-        let recommendation = `Força da mão: ${handEval.type}<br>`;
-        recommendation += `Probabilidade de vitória: ${(probability * 100).toFixed(1)}%<br>`;
+        
+        let output = `<strong>Força da Mão:</strong> ${handEval.type} - ${handEval.description}<br><br>`;
+        
+        output += `<strong>Probabilidade de Vitória:</strong> ${(probability * 100).toFixed(1)}%<br><br>`;
+        
+        output += `<strong>Possíveis sequências:</strong><br>`;
+        output += `${getPossibleHands()}<br><br>`;
+        
+        // Recomendação section
+        output += "<strong>Recomendação:</strong><br>";
+        const activeOpponents = opponents.filter(o => o.action !== 'D').length;
+        const hasPosition = opponents.filter(o => o.action === 'C' || o.action === 'P').length > 0;
+        const aggressiveActions = opponents.filter(o => o.action === 'A' || o.action === 'PT').length;
         
         if (probability > 0.8) {
-            recommendation += "Recomendação: Aumente forte! Mão muito forte.";
+            output += "• Mão muito forte - Ideal para aumento significativo<br>";
+            output += hasPosition ? "• Você tem posição - considere um aumento maior<br>" : "";
+            output += `• Com ${activeOpponents} oponente(s) ativo(s), maximize o valor<br>`;
+            output += aggressiveActions > 0 ? "• Há ação forte - considere re-raise" : "";
         } else if (probability > 0.6) {
-            recommendation += "Recomendação: Aumente moderadamente, mão forte.";
+            output += "• Mão forte - Bom momento para aumentar<br>";
+            output += hasPosition ? "• Use sua posição para controlar o pote<br>" : "";
+            output += aggressiveActions > 0 ? "• Avalie cuidadosamente re-raises" : "• Lidere a ação com raise";
         } else if (probability > 0.4) {
-            recommendation += "Recomendação: Call/Raise pequeno, mão mediana.";
+            output += "• Mão mediana - Jogue com cautela<br>";
+            output += hasPosition ? "• Posição favorável para pagar<br>" : "• Fora de posição - mais cautela";
+            output += aggressiveActions > 0 ? "• Muita ação - considere desistir" : "• Check/Pagar é aceitável";
         } else {
-            recommendation += "Recomendação: Check/Fold, mão fraca.";
+            output += "• Mão fraca - Melhor preservar fichas<br>";
+            output += "• Recomendado desistir a menos que:<br>";
+            output += "  - Apostas mínimas baixas<br>";
+            output += "  - Sem aumentos anteriores<br>";
+            output += "  - Boa posição para roubar";
+        }
+        
+        document.getElementById('recommendation').innerHTML = output;
+        
+        // Update predicted hands section
+        document.getElementById('predicted-hands').innerHTML = 
+            `<strong>Mãos prováveis dos oponentes:</strong><br>${getEnhancedPredictedHands()}`;
+        
+        // Hide unused elements
+        document.getElementById('probabilities').innerHTML = '';
+        document.getElementById('opponent-analysis').style.display = 'none';
+    }
+}
+
+function generateOpponentHands() {
+    opponentHands = [];
+    const usedCards = [...playerHand, ...communityCards];
+    
+    // Generate hands for each active opponent
+    opponents.forEach((opponent, index) => {
+        if (opponent.action === 'D') {
+            opponentHands[index] = [];
+            return;
         }
 
-        let phaseInfo = `Fase atual: ${
-            currentPhase === 'hand' ? 'Seleção de mão inicial' :
-            currentPhase === 'opponent-hands' ? 'Definição de mãos dos oponentes' :
-            currentPhase === 'pre-flop' ? 'Pre-flop' :
-            currentPhase === 'turn' ? 'Turn' :
-            'River'
-        }<br>`;
-        
-        document.getElementById('recommendation').innerHTML = phaseInfo + recommendation;
-        document.getElementById('probabilities').innerHTML = 
-            `Mão: ${playerHand.join(', ')}<br>` +
-            `Comunitárias: ${communityCards.join(', ')}<br>` +
-            `Possibilidades: ${getPossibleHands()}`;
-        document.getElementById('opponent-analysis').innerHTML = 
-            `Análise dos Oponentes:<br>${getDetailedOpponentAnalysis()}`;
-        document.getElementById('predicted-hands').innerHTML = 
-            `Mãos prováveis:<br>${predictOpponentHands().replace(/\n/g, '<br>')}`;
+        let availableCards = deck.filter(card => !usedCards.includes(card));
+        let opponentHand = [];
+
+        // Probabilistic hand generation based on opponent action
+        if (opponent.action === 'A' || opponent.action === 'PT') {
+            // Higher chance of premium hands
+            const premiumCards = availableCards.filter(card => 
+                card.startsWith('A') || card.startsWith('K') || 
+                card.startsWith('Q') || card.startsWith('J')
+            );
+            
+            if (premiumCards.length >= 2) {
+                opponentHand = premiumCards.slice(0, 2);
+            }
+        } else if (opponent.action === 'P') {
+            // Medium strength hands
+            const mediumCards = availableCards.filter(card => 
+                !card.startsWith('2') && !card.startsWith('3') &&
+                !card.startsWith('4') && !card.startsWith('5')
+            );
+            
+            if (mediumCards.length >= 2) {
+                opponentHand = mediumCards.slice(0, 2);
+            }
+        }
+
+        // If no specific hand was generated, choose random cards
+        if (opponentHand.length < 2) {
+            while (opponentHand.length < 2 && availableCards.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableCards.length);
+                opponentHand.push(availableCards[randomIndex]);
+                availableCards.splice(randomIndex, 1);
+            }
+        }
+
+        opponentHands[index] = opponentHand;
+        usedCards.push(...opponentHand);
+    });
+}
+
+// Add this helper function that was also missing
+function hasStraightDraw(cards) {
+    if (cards.length < 3) return false;
+    
+    // Convert cards to ranks and sort them
+    const ranks = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
+    const uniqueRanks = [...new Set(ranks)];
+    
+    // Check for consecutive cards
+    let maxConsecutive = 1;
+    let currentConsecutive = 1;
+    
+    for (let i = 1; i < uniqueRanks.length; i++) {
+        if (uniqueRanks[i] === uniqueRanks[i-1] + 1) {
+            currentConsecutive++;
+            maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
+        } else {
+            currentConsecutive = 1;
+        }
     }
+    
+    // Special case for Ace-low straight
+    if (ranks.includes(values.length - 1)) { // If there's an Ace
+        const lowAceRanks = [...ranks.filter(r => r < 4), -1]; // Consider Ace as -1 for low straight
+        lowAceRanks.sort((a, b) => a - b);
+        
+        let lowConsecutive = 1;
+        for (let i = 1; i < lowAceRanks.length; i++) {
+            if (lowAceRanks[i] === lowAceRanks[i-1] + 1) {
+                lowConsecutive++;
+                maxConsecutive = Math.max(maxConsecutive, lowConsecutive);
+            } else {
+                break;
+            }
+        }
+    }
+    
+    // Return true if we have 4 consecutive cards (one card away from straight)
+    // or if we already have a straight
+    return maxConsecutive >= 4;
 }
 
 function initializeOpponents(count) {
     opponents = Array(count).fill(null).map((_, i) => ({
         id: i + 1,
-        action: 'wait',
+        action: 'C',
         aggression: 0,
         lastBet: 0
     }));
 }
 
 function createOpponentPanel(opponent) {
-    const actions = ['check', 'raise', 'call', 'fold', 'all-in'];
+    const actions = ['C', 'A', 'P', 'D', 'PT'];
     const actionLabels = {
-        'check': 'CHECK',
-        'raise': 'AUMENTAR',
-        'call': 'PAGAR',
-        'fold': 'DESISTIR',
-        'all-in': 'ALL-IN'
+        'C': 'C',  // Check
+        'A': 'A',  // Aumentar
+        'P': 'P',  // Pagar
+        'D': 'D',  // Desistir 
+        'PT': 'PT' // Pot/All-in
     };
     
     const panel = document.createElement('div');
@@ -421,7 +576,7 @@ function setOpponentAction(opponentId, action) {
     const opponent = opponents.find(o => o.id === opponentId);
     if (opponent) {
         opponent.action = action;
-        if (action === 'raise' || action === 'all-in') {
+        if (action === 'A' || action === 'PT') {
             opponent.aggression++;
         }
         updateOpponentControls();
@@ -442,8 +597,9 @@ function updateOpponentControls() {
 
 function initializeDeck() {
     deck = [];
-    suits.forEach(suit => {
-        values.forEach(value => {
+    // First create all cards in the desired order
+    values.forEach(value => {
+        suits.forEach(suit => {
             deck.push(`${value}${suit}`);
         });
     });
@@ -465,142 +621,187 @@ function renderDeck() {
 function toggleCardSelection(card, cardElement) {
     if (cardElement.classList.contains('selected-hand') || 
         cardElement.classList.contains('selected-community')) {
-        // Remove selection logic stays the same
+        // Remove selection
         if (cardElement.classList.contains('selected-hand')) {
             playerHand = playerHand.filter(c => c !== card);
+            currentPhase = 'hand'; // Reset to hand phase if removing hand card
         } else {
             communityCards = communityCards.filter(c => c !== card);
+            // Adjust phase based on remaining community cards
+            if (communityCards.length < 3) currentPhase = 'pre-flop';
+            else if (communityCards.length === 3) currentPhase = 'flop';
+            else if (communityCards.length === 4) currentPhase = 'river';
         }
         cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
     } else {
-        // New selection logic based on phases
-        switch(currentPhase) {
-            case 'hand':
-                if (playerHand.length < 2) {
-                    playerHand.push(card);
-                    cardElement.classList.add('selected-hand');
-                    if (playerHand.length === 2) {
-                        currentPhase = 'opponent-hands';
-                        generateOpponentHands();
-                    }
-                }
-                break;
-                
-            case 'opponent-hands':
-                currentPhase = 'pre-flop';
-                break;
-                
-            case 'pre-flop':
-                if (communityCards.length < 3) {
-                    communityCards.push(card);
-                    cardElement.classList.add('selected-community');
-                    cardElement.classList.add('pre-flop');
-                    if (communityCards.length === 3) {
-                        currentPhase = 'turn';
-                    }
-                }
-                break;
-                
-            case 'turn':
-                if (communityCards.length === 3) {
-                    communityCards.push(card);
-                    cardElement.classList.add('selected-community');
-                    cardElement.classList.add('turn');
-                    currentPhase = 'river';
-                }
-                break;
-                
-            case 'river':
-                if (communityCards.length === 4) {
-                    communityCards.push(card);
-                    cardElement.classList.add('selected-community');
-                    cardElement.classList.add('river');
-                }
-                break;
+        // Add new selection based on current phase
+        if (currentPhase === 'hand' && playerHand.length < 2) {
+            playerHand.push(card);
+            cardElement.classList.add('selected-hand');
+            if (playerHand.length === 2) currentPhase = 'pre-flop';
+        } else if (currentPhase === 'pre-flop' && communityCards.length < 3) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'pre-flop');
+            if (communityCards.length === 3) currentPhase = 'flop';
+        } else if (currentPhase === 'flop' && communityCards.length === 3) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'turn');
+            currentPhase = 'river';
+        } else if (currentPhase === 'river' && communityCards.length === 4) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'river');
         }
     }
     updateGameState();
 }
 
-// New helper function for possible hands
+// Enhanced possible hands analysis
 function getPossibleHands() {
     const cards = [...playerHand, ...communityCards];
     let possibilities = [];
     
-    if (isFlush(cards) || cards.filter(c => c.slice(-1) === cards[0].slice(-1)).length >= 3) {
-        possibilities.push("Possibilidade de Flush");
+    // Analyze flush possibilities
+    const suitCount = {};
+    cards.forEach(card => {
+        const suit = card.slice(-1);
+        suitCount[suit] = (suitCount[suit] || 0) + 1;
+    });
+    
+    Object.entries(suitCount).forEach(([suit, count]) => {
+        if (count >= 4) {
+            const neededSuit = suit;
+            const remainingCards = deck.filter(card => 
+                !cards.includes(card) && card.endsWith(neededSuit)
+            );
+            possibilities.push(`Flush draw com ${count} cartas de ${suit}. Cartas que completam: ${remainingCards.join(', ')}`);
+        }
+    });
+    
+    // Analyze straight possibilities
+    if (hasStraightDraw(cards)) {
+        const possibleCompletions = findStraightCompletionCards(cards);
+        possibilities.push(`Draw de sequência - Cartas que completam: ${possibleCompletions.join(', ')}`);
     }
-    if (isStraight(cards) || hasStraightDraw(cards)) {
-        possibilities.push("Possibilidade de Sequência");
-    }
-    if (isPair(cards)) {
-        possibilities.push("Par com possibilidade de Trinca");
-    }
-
-    return possibilities.length ? possibilities.join(", ") : "Sem possibilidades significativas";
+    
+    // Add pair analysis with specific completions
+    const rankCount = {};
+    cards.forEach(card => {
+        const rank = card.slice(0, -1);
+        rankCount[rank] = (rankCount[rank] || 0) + 1;
+    });
+    
+    Object.entries(rankCount).forEach(([rank, count]) => {
+        if (count === 2) {
+            const possibleCompletions = deck.filter(card => 
+                !cards.includes(card) && card.startsWith(rank)
+            );
+            possibilities.push(`Par de ${rank}s - Trinca possível com: ${possibleCompletions.join(', ')}`);
+        }
+    });
+    
+    return possibilities.length ? possibilities.join('\n') : "Sem sequências significativas no momento";
 }
 
-// Updated detailed opponent analysis function
-function getDetailedOpponentAnalysis() {
-    return opponents.map(opponent => {
-        const actionMap = {
-            'wait': 'Aguardando',
-            'check': 'CHECK',
-            'raise': 'AUMENTAR',
-            'call': 'PAGAR',
-            'fold': 'DESISTIR',
-            'all-in': 'ALL-IN'
-        };
-        
-        let analysis = `Oponente ${opponent.id}:<br>`;
-        analysis += `- Ação atual: ${actionMap[opponent.action]}<br>`;
-
-        // Análise baseada na ação do oponente
-        let perfil = '';
-        if (opponent.action === 'raise') {
-            perfil = 'Jogador agressivo, provavelmente com mão forte';
-            if (opponent.aggression > 1) {
-                perfil += '. Histórico de aumentos frequentes';
+// Helper function to find straight completion cards
+function findStraightCompletionCards(cards) {
+    const ranks = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
+    const uniqueRanks = [...new Set(ranks)];
+    const possibleRanks = [];
+    
+    for (let i = 0; i < values.length - 4; i++) {
+        const window = uniqueRanks.filter(r => r >= i && r <= i + 4);
+        if (window.length >= 3) {
+            for (let j = i; j <= i + 4; j++) {
+                if (!window.includes(j)) {
+                    possibleRanks.push(values[j]);
+                }
             }
-        } else if (opponent.action === 'all-in') {
-            perfil = 'Muito agressivo - pode ter uma mão muito forte ou estar blefando';
-        } else if (opponent.action === 'call') {
-            perfil = 'Jogador cauteloso, provavelmente com mão média a forte';
-        } else if (opponent.action === 'check') {
-            perfil = 'Jogador passivo, pode estar esperando para ver mais cartas';
-        } else if (opponent.action === 'fold') {
-            perfil = 'Jogador conservador ou com mão fraca';
+        }
+    }
+    
+    return [...new Set(possibleRanks)];
+}
+
+// Enhanced opponent analysis based on actions
+function analyzeOpponentBehavior(opponent, handStrength) {
+    let analysis = `Oponente ${opponent.id}: `;
+    
+    switch(opponent.action) {
+        case 'C':
+            analysis += `• Check sugere: ${
+                handStrength > 0.7 ? "Possível slow play - mão forte" :
+                handStrength > 0.4 ? "Mão mediana ou draw" :
+                "Mão fraca ou esperando ver próxima carta"
+            }\n`;
+            break;
+        case 'A':
+            analysis += `• Aumento sugere: ${
+                opponent.aggression > 2 ? "Jogador muito agressivo - possível blefe" :
+                handStrength > 0.6 ? "Força real na mão" :
+                "Tentando roubar o pote"
+            }\n`;
+            break;
+        case 'P':
+            analysis += `• Pagou sugere: ${
+                handStrength > 0.5 ? "Provavelmente tem uma mão média a forte" :
+                "Pode estar em draw ou com mão marginal"
+            }\n`;
+            break;
+        case 'D':
+            analysis += "• Desistiu - mão fraca ou sem valor\n";
+            break;
+        case 'PT':
+            analysis += `• All-in sugere: ${
+                handStrength > 0.8 ? "Muito provavelmente tem nuts" :
+                handStrength > 0.6 ? "Mão forte ou semi-blefe com draw" :
+                "Possível blefe ou move desesperado"
+            }\n`;
+            break;
+    }
+    
+    return analysis;
+}
+
+// New function for enhanced predicted hands
+function getEnhancedPredictedHands() {
+    let analysis = '';
+    opponents.forEach((opponent, index) => {
+        if (opponent.action === 'D') {
+            analysis += `Oponente ${opponent.id}: Desistiu da mão\n`;
+            return;
         }
 
-        // Adiciona nível de agressividade
-        let nivelAgressao = '';
-        if (opponent.aggression > 2) {
-            nivelAgressao = 'Muito agressivo';
-        } else if (opponent.aggression > 0) {
-            nivelAgressao = 'Moderadamente agressivo';
-        } else {
-            nivelAgressao = 'Passivo';
+        const opponentCards = opponentHands[index];
+        if (!opponentCards || opponentCards.length === 0) {
+            analysis += `Oponente ${opponent.id}: Cartas desconhecidas\n`;
+            return;
         }
 
-        analysis += `- Perfil: ${perfil}<br>`;
-        analysis += `- Comportamento: ${nivelAgressao}<br>`;
+        const allCards = [...opponentCards, ...communityCards];
+        const handEval = evaluateHand(allCards);
+        let opponentAnalysis = analyzeOpponentBehavior(opponent, handEval.strength);
         
-        // Análise da força provável da mão
-        let forcaProvavel = '';
-        if (opponent.action === 'raise' || opponent.action === 'all-in') {
-            forcaProvavel = 'Alta probabilidade de par alto ou cartas altas (AK, AQ)';
-        } else if (opponent.action === 'call') {
-            forcaProvavel = 'Provável par médio ou cartas conectadas';
-        } else if (opponent.action === 'check') {
-            forcaProvavel = 'Possível draw ou mão mediana';
-        } else if (opponent.action === 'fold') {
-            forcaProvavel = 'Mão fraca';
+        analysis += opponentAnalysis + `• Mão atual: ${handEval.type}\n`;
+        
+        // Análise de draws
+        if (hasStraightDraw(allCards)) {
+            analysis += `• Possível draw para sequência\n`;
         }
         
-        analysis += `- Força provável: ${forcaProvavel}`;
+        const suitCount = {};
+        allCards.forEach(card => {
+            const suit = card.slice(-1);
+            suitCount[suit] = (suitCount[suit] || 0) + 1;
+        });
         
-        return analysis;
-    }).join('<br><br>');
+        if (Math.max(...Object.values(suitCount)) >= 4) {
+            analysis += `• Possível draw para flush\n`;
+        }
+
+        analysis += '\n';
+    });
+
+    return analysis;
 }
 
 // Inicialização
