@@ -166,22 +166,23 @@
             updateGameState();
         }
 
-
         function evaluateHand(cards) {
             const ranks = cards.map(card => card.slice(0, -1));
             const suits = cards.map(card => card.slice(-1));
             const rankCounts = {};
             const suitCounts = {};
-
+        
             ranks.forEach(rank => rankCounts[rank] = (rankCounts[rank] || 0) + 1);
             suits.forEach(suit => suitCounts[suit] = (suitCounts[suit] || 0) + 1);
-
+        
             const isFlush = Object.values(suitCounts).some(count => count >= 5);
-            const sortedRanks = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
+            const sortedRanks = ranks
+                .map(rank => isNaN(rank) ? (rank === 'A' ? 1 : rank === 'K' ? 13 : rank === 'Q' ? 12 : 11) : parseInt(rank))
+                .sort((a, b) => a - b);
             const isStraight = sortedRanks.some((rank, index, arr) => 
                 index <= arr.length - 5 && arr.slice(index, index + 5).every((val, i, slice) => val === slice[0] + i)
             );
-
+        
             if (isFlush && isStraight) return "Straight Flush";
             if (Object.values(rankCounts).includes(4)) return "Quadra";
             if (Object.values(rankCounts).includes(3) && Object.values(rankCounts).includes(2)) return "Full House";
@@ -190,9 +191,9 @@
             if (Object.values(rankCounts).includes(3)) return "Trinca";
             if (Object.values(rankCounts).filter(count => count === 2).length === 2) return "Dois Pares";
             if (Object.values(rankCounts).includes(2)) return "Par";
-            return "Carta Alta";
+            return "Sem Combinação"; // Retorno para mãos sem combinação
         }
-
+        
         function simulateOpponentHands() {
             const remainingDeck = deck.filter(card => ![...playerHand, ...communityCards].includes(card));
             let opponentWins = 0, playerWins = 0, draws = 0;
@@ -229,8 +230,11 @@
             const strongHands = ["Sequência", "Flush", "Full House", "Quadra", "Straight Flush"];
             if (opponentAggressive) opponentWinRate += 20; // Ajuste se o oponente está sendo agressivo
         
+            if (handStrength === "Sem Combinação" && opponentAggressive) {
+                return "Recomendação: Desistir (Fold) devido à mão fraca.";
+            }
             if (strongHands.includes(handStrength) && opponentWinRate < 50) {
-                return "Recomendação: Aposte tudo (All-play) ou aumente a aposta (Raise)!";
+                return "Recomendação: Aposte tudo (All-in) ou aumente a aposta (Raise)!";
             }
             if (opponentWinRate >= 50) {
                 return "Recomendação: Desistir (Fold).";
@@ -248,13 +252,13 @@
                 opponentAnalysisElement.textContent = "";
                 return;
             }
-
+        
             const allCards = [...playerHand, ...communityCards];
             const handStrength = evaluateHand(allCards);
             const opponentSimulations = simulateOpponentHands();
-
+        
             const recommendation = getRecommendation(handStrength, opponentSimulations.opponentWinRate);
-
+        
             recommendationElement.textContent = recommendation;
             probabilitiesElement.textContent = `Combinação da sua mão: ${handStrength}.`;
             opponentAnalysisElement.textContent = `
