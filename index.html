@@ -1,136 +1,166 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Poker Inteligente</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 20px;
             background-color: #f8f9fa;
+            color: #212529;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
         h2 {
-            text-align: center;
-        }
-        .info-container {
-            margin-top: 20px;
-            text-align: center;
+            font-size: 1.5rem;
+            color: #495057;
+            margin: 20px 0 10px 0;
         }
         .deck {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
+            padding: 10px;
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             margin-top: 20px;
         }
         .card {
             width: 50px;
             height: 70px;
-            border: 1px solid #ccc;
             border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
             cursor: pointer;
-            background-color: white;
+            transition: transform 0.2s ease-in-out;
+            background-color: #ffffff;
+            border: 1px solid #ced4da;
         }
-        .card.selected {
-            background-color: #007bff;
+        .card.red { color: #e74c3c; }
+        .card.black { color: #212529; }
+        .card:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        .selected-hand {
+            background-color: #3498db;
+            color: white !important;
+        }
+        .selected-community {
+            background-color: #e67e22;
+            color: white !important;
+        }
+        .info-container {
+            margin: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 600px;
+        }
+        button {
+            padding: 8px 15px;
+            font-size: 14px;
+            border: none;
+            background-color: #3498db;
             color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.9;
         }
     </style>
 </head>
 <body>
     <h2>Análise de Poker Inteligente</h2>
     <div class="info-container">
-        <div id="handStrength"></div>
-        <div id="probability"></div>
-        <div id="recommendation"></div>
-        <div id="sequencePossibility"></div>
-        <div id="sequenceList"></div>
+        <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
+        <div id="probabilities" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Probabilidades: </div>
     </div>
     <div class="deck" id="deck"></div>
+    <button onclick="restartGame()">Reiniciar Jogo</button>
 
-    <script>
-        const suits = ['♥', '♦', '♣', '♠'];
-        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-        let playerHand = [];
-        let communityCards = [];
+<script>
+    const suits = ['♥', '♦', '♣', '♠'];
+    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    let deck = [];
+    let playerHand = [];
+    let communityCards = [];
 
-        function initializeDeck() {
-            const deck = [];
-            suits.forEach(suit => values.forEach(value => deck.push(`${value}${suit}`)));
-
-            const deckElement = document.getElementById('deck');
-            deck.forEach(card => {
-                const cardElement = document.createElement('div');
-                cardElement.className = 'card';
-                cardElement.textContent = card;
-                cardElement.onclick = () => toggleCardSelection(card, cardElement);
-                deckElement.appendChild(cardElement);
+    function initializeDeck() {
+        deck = [];
+        suits.forEach(suit => {
+            values.forEach(value => {
+                deck.push(`${value}${suit}`);
             });
+        });
+        renderDeck();
+    }
+
+    function renderDeck() {
+        const deckElement = document.getElementById('deck');
+        deckElement.innerHTML = '';
+        deck.forEach(card => {
+            const cardElement = document.createElement('div');
+            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            cardElement.textContent = card;
+            cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
+            deckElement.appendChild(cardElement);
+        });
+    }
+
+    function toggleCardSelection(card, cardElement) {
+        if (cardElement.classList.contains('selected-hand')) {
+            playerHand = playerHand.filter(c => c !== card);
+            cardElement.classList.remove('selected-hand');
+        } else if (cardElement.classList.contains('selected-community')) {
+            communityCards = communityCards.filter(c => c !== card);
+            cardElement.classList.remove('selected-community');
+        } else if (playerHand.length < 2) {
+            playerHand.push(card);
+            cardElement.classList.add('selected-hand');
+        } else if (communityCards.length < 5) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community');
         }
+        updateGameState();
+    }
 
-        function toggleCardSelection(card, cardElement) {
-            if (playerHand.length < 2 && !playerHand.includes(card)) {
-                playerHand.push(card);
-                cardElement.classList.add('selected');
-            } else if (communityCards.length < 5 && !communityCards.includes(card)) {
-                communityCards.push(card);
-                cardElement.classList.add('selected');
-            }
-            analyzeGameState();
-        }
+    function updateGameState() {
+        const recommendation = playerHand.length === 2
+            ? `Mão selecionada: ${playerHand.join(', ')}`
+            : 'Selecione duas cartas para sua mão.';
+        const probabilities = communityCards.length
+            ? `Cartas comunitárias: ${communityCards.join(', ')}`
+            : 'Selecione as cartas comunitárias.';
+        
+        document.getElementById('recommendation').textContent = recommendation;
+        document.getElementById('probabilities').textContent = probabilities;
+    }
 
-        function analyzeGameState() {
-            const allCards = [...playerHand, ...communityCards];
-            const handStrength = evaluateHand(allCards);
-            const sequenceInfo = analyzeSequence(allCards);
-
-            document.getElementById('handStrength').textContent = `Força da Mão: ${handStrength}`;
-            document.getElementById('probability').textContent = `Probabilidade de Vitória: ${handStrength === 'Sequência' ? '80%' : '30%'}`;
-            document.getElementById('recommendation').textContent = handStrength === 'Sequência' ? 'Recomendação: Aposte' : 'Recomendação: Cautela';
-            document.getElementById('sequencePossibility').textContent = `Possibilidade de Sequência: ${sequenceInfo.possibility ? 'Alta' : 'Baixa'}`;
-            document.getElementById('sequenceList').textContent = `Sequências Construídas: ${sequenceInfo.list.join(', ')}`;
-        }
-
-        function evaluateHand(cards) {
-            const ranks = cards.map(card => card.slice(0, -1));
-            if (isStraight(ranks)) return 'Sequência';
-            if (ranks.includes('A')) return 'Carta Alta';
-            return 'Carta Baixa';
-        }
-
-        function analyzeSequence(cards) {
-            const cardRanks = cards.map(card => values.indexOf(card.slice(0, -1)));
-            cardRanks.sort((a, b) => a - b);
-
-            let sequenceList = [];
-            let currentSequence = [cardRanks[0]];
-            for (let i = 1; i < cardRanks.length; i++) {
-                if (cardRanks[i] === cardRanks[i - 1] + 1) {
-                    currentSequence.push(cardRanks[i]);
-                } else {
-                    if (currentSequence.length >= 5) sequenceList.push(currentSequence);
-                    currentSequence = [cardRanks[i]];
-                }
-            }
-            if (currentSequence.length >= 5) sequenceList.push(currentSequence);
-
-            return {
-                possibility: sequenceList.length > 0,
-                list: sequenceList.map(seq => seq.map(rank => values[rank]).join(' - '))
-            };
-        }
-
-        function isStraight(ranks) {
-            const indices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
-            for (let i = 0; i <= indices.length - 5; i++) {
-                if (indices[i + 4] - indices[i] === 4) return true;
-            }
-            return false;
-        }
-
+    function restartGame() {
+        playerHand = [];
+        communityCards = [];
         initializeDeck();
-    </script>
+        updateGameState();
+    }
+
+    initializeDeck();
+</script>
 </body>
 </html>
