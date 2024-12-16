@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <base href="/" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Poker Inteligente</title>
     <style>
         body {
@@ -53,8 +54,20 @@
             transform: scale(1.1);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
         }
-        .selected {
+        .selected-hand {
             background-color: #3498db;
+            color: white !important;
+        }
+        .selected-community.pre-flop {
+            background-color: #e67e22;
+            color: white !important;
+        }
+        .selected-community.flop {
+            background-color: #9b59b6;
+            color: white !important;
+        }
+        .selected-community.river {
+            background-color: #e74c3c;
             color: white !important;
         }
         .info-container {
@@ -62,7 +75,7 @@
             padding: 15px;
             background-color: white;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             width: 80%;
             max-width: 600px;
         }
@@ -74,6 +87,7 @@
             color: white;
             border-radius: 5px;
             cursor: pointer;
+            margin: 5px;
         }
         button:hover {
             opacity: 0.9;
@@ -83,88 +97,110 @@
 <body>
     <h2>Análise de Poker Inteligente</h2>
     <div class="info-container">
-        <div id="recommendation" style="font-size: 16px; color: #343a40;">Recomendação: </div>
-        <div id="probabilities" style="font-size: 14px; color: #6c757d;">Probabilidades: </div>
-        <div id="card-count" style="font-size: 14px; color: #6c757d;">Cartas restantes: </div>
+        <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
+        <div id="sequence-check" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Sequência: </div>
     </div>
     <div class="deck" id="deck"></div>
+    <button onclick="restartGame()">Reiniciar Jogo</button>
 
-    <script>
-        const suits = ['♥', '♦', '♣', '♠'];
-        const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-        let deck = [];
-        let playerHand = [];
-        let communityCards = [];
+<script>
+    const suits = ['♥', '♦', '♣', '♠'];
+    const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    let deck = [];
+    let playerHand = [];
+    let communityCards = [];
+    let phase = 'hand'; // Possible phases: hand, pre-flop, flop, river
 
-        function initializeDeck() {
-            deck = [];
-            suits.forEach(suit => {
-                values.forEach(value => {
-                    deck.push(`${value}${suit}`);
-                });
+    function initializeDeck() {
+        deck = [];
+        suits.forEach(suit => {
+            values.forEach(value => {
+                deck.push(`${value}${suit}`);
             });
-            renderDeck();
-        }
+        });
+        renderDeck();
+    }
 
-        function renderDeck() {
-            const deckElement = document.getElementById('deck');
-            deckElement.innerHTML = '';
-            deck.forEach(card => {
-                const cardElement = document.createElement('div');
-                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
-                cardElement.textContent = card;
-                cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
-                deckElement.appendChild(cardElement);
-            });
-            updateCardCount();
-        }
+    function renderDeck() {
+        const deckElement = document.getElementById('deck');
+        deckElement.innerHTML = '';
+        deck.forEach(card => {
+            const cardElement = document.createElement('div');
+            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+            cardElement.textContent = card;
+            cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
+            deckElement.appendChild(cardElement);
+        });
+    }
 
-        function toggleCardSelection(card, cardElement) {
-            if (playerHand.includes(card) || communityCards.includes(card)) {
-                playerHand = playerHand.filter(c => c !== card);
-                communityCards = communityCards.filter(c => c !== card);
-                cardElement.classList.remove('selected');
-            } else {
-                if (playerHand.length < 2) {
-                    playerHand.push(card);
-                } else if (communityCards.length < 5) {
-                    communityCards.push(card);
-                }
-                cardElement.classList.add('selected');
+    function toggleCardSelection(card, cardElement) {
+        if (cardElement.classList.contains('selected-hand')) {
+            playerHand = playerHand.filter(c => c !== card);
+            cardElement.classList.remove('selected-hand');
+        } else if (cardElement.classList.contains('selected-community')) {
+            communityCards = communityCards.filter(c => c !== card);
+            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+        } else if (phase === 'hand' && playerHand.length < 2) {
+            playerHand.push(card);
+            cardElement.classList.add('selected-hand');
+            if (playerHand.length === 2) phase = 'pre-flop';
+        } else if (phase === 'pre-flop' && communityCards.length < 3) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'pre-flop');
+            if (communityCards.length === 3) phase = 'flop';
+        } else if (phase === 'flop' && communityCards.length < 4) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'flop');
+            if (communityCards.length === 4) phase = 'river';
+        } else if (phase === 'river' && communityCards.length < 5) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'river');
+        }
+        updateGameState();
+    }
+
+    function checkSequence(cards) {
+        const allCards = cards.map(card => card.slice(0, -1)).map(value => {
+            if (value === 'A') return 14;
+            if (value === 'K') return 13;
+            if (value === 'Q') return 12;
+            if (value === 'J') return 11;
+            return parseInt(value);
+        }).sort((a, b) => a - b);
+
+        for (let i = 0; i <= allCards.length - 5; i++) {
+            const sequence = allCards.slice(i, i + 5);
+            if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
+                return sequence;
             }
-            updateGameState();
         }
 
-        function updateGameState() {
-            const probabilities = calculateProbabilities();
-            document.getElementById('recommendation').innerText = probabilities.recommendation;
-            document.getElementById('probabilities').innerText = `Probabilidade de vitória: ${(probabilities.winProbability * 100).toFixed(1)}%`;
-            updateCardCount();
-        }
+        return null;
+    }
 
-        function updateCardCount() {
-            const remainingCards = deck.filter(card => !playerHand.includes(card) && !communityCards.includes(card));
-            document.getElementById('card-count').innerText = `Cartas restantes no baralho: ${remainingCards.length}`;
-        }
+    function updateGameState() {
+        const allCards = [...playerHand, ...communityCards];
+        const sequence = checkSequence(allCards);
+        const recommendation = playerHand.length === 2
+            ? `Mão selecionada: ${playerHand.join(', ')}`
+            : 'Selecione duas cartas para sua mão.';
+        const sequenceText = sequence
+            ? `Sequência encontrada: ${sequence.join(', ')}`
+            : 'Nenhuma sequência encontrada.';
+        
+        document.getElementById('recommendation').textContent = recommendation;
+        document.getElementById('sequence-check').textContent = sequenceText;
+    }
 
-        function calculateProbabilities() {
-            // Simples probabilidade baseada em outs (melhoria posterior necessária para cálculos mais precisos)
-            const totalCards = 52;
-            const knownCards = playerHand.length + communityCards.length;
-            const remainingCards = totalCards - knownCards;
-
-            // Probabilidades baseadas em outs fictícios
-            const outs = 10; // Exemplo, ajustável com base em combinações reais
-            const winProbability = outs / remainingCards;
-
-            return {
-                winProbability,
-                recommendation: winProbability > 0.5 ? 'Aumente' : 'Jogue com cautela'
-            };
-        }
-
-        // Inicialização
+    function restartGame() {
+        playerHand = [];
+        communityCards = [];
+        phase = 'hand';
         initializeDeck();
-    </script>
+        updateGameState();
+    }
+
+    initializeDeck();
+</script>
 </body>
 </html>
