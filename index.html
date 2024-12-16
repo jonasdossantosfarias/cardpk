@@ -109,7 +109,7 @@
     let deck = [];
     let playerHand = [];
     let communityCards = [];
-    let phase = 'hand';
+    let phase = 'hand'; // Possible phases: hand, pre-flop, flop, river
 
     function initializeDeck() {
         deck = [];
@@ -160,53 +160,46 @@
     }
 
     function checkSequence(cards) {
-        // Convert card values to numbers and handle Ace as 1 and 14
-        const allValues = cards.map(card => card.slice(0, -1)).map(value => {
-            if (value === 'A') return 14; // Ace high
+        const allCards = cards.map(card => card.slice(0, -1)).map(value => {
+            if (value === 'A') return 14;
             if (value === 'K') return 13;
             if (value === 'Q') return 12;
             if (value === 'J') return 11;
             return parseInt(value);
-        });
+        }).sort((a, b) => a - b);
 
-        // Add Ace as 1 for low straights (A-2-3-4-5)
-        if (allValues.includes(14)) allValues.push(1);
-
-        // Sort and remove duplicates
-        const uniqueValues = [...new Set(allValues)].sort((a, b) => a - b);
-
-        // Check for sequence of 5 consecutive numbers
-        for (let i = 0; i <= uniqueValues.length - 5; i++) {
-            if (uniqueValues[i + 4] - uniqueValues[i] === 4) {
-                return uniqueValues.slice(i, i + 5); // Return the sequence
+        for (let i = 0; i < allCards.length - 4; i++) {
+            const sequence = allCards.slice(i, i + 5);
+            if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
+                return sequence;
             }
         }
-
         return null;
     }
 
     function updateGameState() {
         const allCards = [...playerHand, ...communityCards];
-        const sequence = checkSequence(allCards);
-
-        // Update recommendation
-        const recommendation = playerHand.length === 2
-            ? `Mão selecionada: ${playerHand.join(', ')}`
-            : 'Selecione duas cartas para sua mão.';
-
-        // Sequence check and recommendation
+        let recommendation;
         let sequenceText;
-        if (sequence) {
-            sequenceText = `Sequência encontrada: ${sequence.join(', ')}. `;
-            if (sequence[4] === 14 && sequence[0] === 10) {
-                sequenceText += 'Parabéns, você tem um Royal Flush! Vá all-in!';
-            } else if (sequence[4] - sequence[0] === 4) {
-                sequenceText += 'Ótima mão! Aposte forte!';
+
+        if (playerHand.length === 2) {
+            const sequence = checkSequence(allCards);
+            if (sequence) {
+                sequenceText = `Sequência encontrada: ${sequence.join(', ')}`;
+                recommendation = 'Recomendação: Aposte agressivamente!';
             } else {
-                sequenceText += 'Mão decente, jogue com confiança.';
+                const possibleSequence = checkSequence([...playerHand, ...communityCards].slice(0, 4));
+                if (possibleSequence) {
+                    sequenceText = `Quase uma sequência: cartas ${possibleSequence.join(', ')}`;
+                    recommendation = 'Recomendação: Continue, boas chances para sequência!';
+                } else {
+                    sequenceText = 'Nenhuma sequência detectada.';
+                    recommendation = 'Recomendação: Jogue com cautela.';
+                }
             }
         } else {
-            sequenceText = 'Nenhuma sequência encontrada. Jogue com cautela.';
+            recommendation = 'Selecione duas cartas para sua mão.';
+            sequenceText = '';
         }
 
         document.getElementById('recommendation').textContent = recommendation;
@@ -223,6 +216,7 @@
 
     initializeDeck();
 </script>
+
 
 </body>
 </html>
