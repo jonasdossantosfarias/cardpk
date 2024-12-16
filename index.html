@@ -1,108 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Análise de Poker Inteligente</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f9fa;
-            color: #212529;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        h2 {
-            font-size: 1.5rem;
-            color: #495057;
-            margin: 20px 0 10px 0;
-        }
-        .deck {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            padding: 10px;
-            background: #ffffff;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-        }
-        .card {
-            width: 50px;
-            height: 70px;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            transition: transform 0.2s ease-in-out;
-            background-color: #ffffff;
-            border: 1px solid #ced4da;
-        }
-        .card.red { color: #e74c3c; }
-        .card.black { color: #212529; }
-        .card:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-        }
-        .selected-hand {
-            background-color: #3498db;
-            color: white !important;
-        }
-        .selected-community.pre-flop {
-            background-color: #e67e22;
-            color: white !important;
-        }
-        .selected-community.flop {
-            background-color: #9b59b6;
-            color: white !important;
-        }
-        .selected-community.river {
-            background-color: #e74c3c;
-            color: white !important;
-        }
-        .info-container {
-            margin: 15px;
-            padding: 15px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            width: 80%;
-            max-width: 600px;
-        }
-        button {
-            padding: 8px 15px;
-            font-size: 14px;
-            border: none;
-            background-color: #3498db;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-    </style>
-</head>
-<body>
-    <h2>Análise de Poker Inteligente</h2>
-    <div class="info-container">
-        <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
-        <div id="sequence-check" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Sequência: </div>
-    </div>
-    <div class="deck" id="deck"></div>
-    <button onclick="restartGame()">Reiniciar Jogo</button>
-
 <script>
     const suits = ['♥', '♦', '♣', '♠'];
     const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -160,33 +55,55 @@
     }
 
     function checkSequence(cards) {
-        const allCards = cards.map(card => card.slice(0, -1)).map(value => {
-            if (value === 'A') return 14;
+        // Convert card values to numbers and handle Ace as 1 and 14
+        const allValues = cards.map(card => card.slice(0, -1)).map(value => {
+            if (value === 'A') return 14; // Ace high
             if (value === 'K') return 13;
             if (value === 'Q') return 12;
             if (value === 'J') return 11;
             return parseInt(value);
-        }).sort((a, b) => a - b);
+        });
 
-        for (let i = 0; i < allCards.length - 4; i++) {
-            const sequence = allCards.slice(i, i + 5);
-            if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
-                return sequence;
+        // Add Ace as 1 for low straights (A-2-3-4-5)
+        if (allValues.includes(14)) allValues.push(1);
+
+        // Sort and remove duplicates
+        const uniqueValues = [...new Set(allValues)].sort((a, b) => a - b);
+
+        // Check for sequence of 5 consecutive numbers
+        for (let i = 0; i <= uniqueValues.length - 5; i++) {
+            if (uniqueValues[i + 4] - uniqueValues[i] === 4) {
+                return uniqueValues.slice(i, i + 5); // Return the sequence
             }
         }
+
         return null;
     }
 
     function updateGameState() {
         const allCards = [...playerHand, ...communityCards];
         const sequence = checkSequence(allCards);
+
+        // Update recommendation
         const recommendation = playerHand.length === 2
             ? `Mão selecionada: ${playerHand.join(', ')}`
             : 'Selecione duas cartas para sua mão.';
-        const sequenceText = sequence
-            ? `Sequência encontrada: ${sequence.join(', ')}. Recomendação: Aposte agressivamente!`
-            : 'Nenhuma sequência encontrada. Recomendação: Jogue com cautela.';
-        
+
+        // Sequence check and recommendation
+        let sequenceText;
+        if (sequence) {
+            sequenceText = `Sequência encontrada: ${sequence.join(', ')}. `;
+            if (sequence[4] === 14 && sequence[0] === 10) {
+                sequenceText += 'Parabéns, você tem um Royal Flush! Vá all-in!';
+            } else if (sequence[4] - sequence[0] === 4) {
+                sequenceText += 'Ótima mão! Aposte forte!';
+            } else {
+                sequenceText += 'Mão decente, jogue com confiança.';
+            }
+        } else {
+            sequenceText = 'Nenhuma sequência encontrada. Jogue com cautela.';
+        }
+
         document.getElementById('recommendation').textContent = recommendation;
         document.getElementById('sequence-check').textContent = sequenceText;
     }
@@ -201,6 +118,3 @@
 
     initializeDeck();
 </script>
-
-</body>
-</html>
