@@ -160,31 +160,31 @@
     }
 
     function checkSequence(cards) {
-        const allCards = cards.map(card => card.slice(0, -1)).map(value => {
+        const uniqueValues = [...new Set(cards.map(card => card.slice(0, -1)).map(value => {
             if (value === 'A') return 14;
             if (value === 'K') return 13;
             if (value === 'Q') return 12;
             if (value === 'J') return 11;
             return parseInt(value);
-        }).sort((a, b) => a - b);
+        }))].sort((a, b) => a - b);
 
-        for (let i = 0; i <= allCards.length - 5; i++) {
-            const sequence = allCards.slice(i, i + 5);
+        for (let i = 0; i <= uniqueValues.length - 5; i++) {
+            const sequence = uniqueValues.slice(i, i + 5);
             if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
                 return sequence;
             }
         }
+
         return null;
     }
 
     function calculateWinPercentage(sequence) {
-        if (!sequence) return 15; // Low percentage for no sequence.
+        if (!sequence) return 15;
 
-        // Example percentages based on sequence strength:
         const highestCard = Math.max(...sequence);
-        if (highestCard >= 10) return 85; // Strong high card sequence.
-        if (highestCard >= 6) return 65;  // Medium sequence strength.
-        return 45; // Weak sequence.
+        if (highestCard >= 10) return 85;
+        if (highestCard >= 6) return 65;
+        return 45;
     }
 
     function updateGameState() {
@@ -193,7 +193,7 @@
         const recommendation = playerHand.length === 2
             ? `Mão selecionada: ${playerHand.join(', ')}`
             : 'Selecione duas cartas para sua mão.';
-        
+
         let sequenceText;
         if (sequence) {
             const winPercentage = calculateWinPercentage(sequence);
@@ -220,5 +220,6 @@
 
     initializeDeck();
 </script>
+
 </body>
 </html>
