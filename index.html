@@ -58,8 +58,16 @@
             background-color: #3498db;
             color: white !important;
         }
-        .selected-community {
+        .selected-community.pre-flop {
             background-color: #e67e22;
+            color: white !important;
+        }
+        .selected-community.flop {
+            background-color: #9b59b6;
+            color: white !important;
+        }
+        .selected-community.river {
+            background-color: #e74c3c;
             color: white !important;
         }
         .info-container {
@@ -101,6 +109,7 @@
     let deck = [];
     let playerHand = [];
     let communityCards = [];
+    let phase = 'hand'; // Possible phases: hand, pre-flop, flop, river
 
     function initializeDeck() {
         deck = [];
@@ -130,13 +139,22 @@
             cardElement.classList.remove('selected-hand');
         } else if (cardElement.classList.contains('selected-community')) {
             communityCards = communityCards.filter(c => c !== card);
-            cardElement.classList.remove('selected-community');
-        } else if (playerHand.length < 2) {
+            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+        } else if (phase === 'hand' && playerHand.length < 2) {
             playerHand.push(card);
             cardElement.classList.add('selected-hand');
-        } else if (communityCards.length < 5) {
+            if (playerHand.length === 2) phase = 'pre-flop';
+        } else if (phase === 'pre-flop' && communityCards.length < 3) {
             communityCards.push(card);
-            cardElement.classList.add('selected-community');
+            cardElement.classList.add('selected-community', 'pre-flop');
+            if (communityCards.length === 3) phase = 'flop';
+        } else if (phase === 'flop' && communityCards.length < 4) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'flop');
+            if (communityCards.length === 4) phase = 'river';
+        } else if (phase === 'river' && communityCards.length < 5) {
+            communityCards.push(card);
+            cardElement.classList.add('selected-community', 'river');
         }
         updateGameState();
     }
@@ -156,6 +174,7 @@
     function restartGame() {
         playerHand = [];
         communityCards = [];
+        phase = 'hand';
         initializeDeck();
         updateGameState();
     }
