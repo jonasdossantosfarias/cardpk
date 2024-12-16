@@ -216,17 +216,17 @@
         const hasThreeOfAKind = valueCounts.includes(3);
         const pairs = valueCounts.filter(count => count === 2).length;
 
-        if (isRoyalFlush) return { type: 'Royal Straight Flush', rank: 10 };
-        if (isStraightFlush) return { type: 'Straight Flush', rank: 9 };
-        if (hasFourOfAKind) return { type: 'Quadra', rank: 8 };
-        if (hasThreeOfAKind && pairs > 0) return { type: 'Full House', rank: 7 };
-        if (isFlush) return { type: 'Flush', rank: 6 };
-        if (isStraight) return { type: 'Straight', rank: 5 };
-        if (hasThreeOfAKind) return { type: 'Trinca', rank: 4 };
-        if (pairs === 2) return { type: 'Dois Pares', rank: 3 };
-        if (pairs === 1) return { type: 'Par', rank: 2 };
+        if (isRoyalFlush) return { type: '1- Royal Straight Flush', rank: 10 };
+        if (isStraightFlush) return { type: '2- Straight Flush', rank: 9 };
+        if (hasFourOfAKind) return { type: '3- Quadra', rank: 8 };
+        if (hasThreeOfAKind && pairs > 0) return { type: '4- Full House', rank: 7 };
+        if (isFlush) return { type: '5- Flush', rank: 6 };
+        if (isStraight) return { type: '6- Sequencia', rank: 5 };
+        if (hasThreeOfAKind) return { type: '7- Trinca', rank: 4 };
+        if (pairs === 2) return { type: '8- Dois Pares', rank: 3 };
+        if (pairs === 1) return { type: '9- Par', rank: 2 };
 
-        return { type: 'Carta Alta', rank: 1, highCard: Math.max(...sortedValues) };
+        return { type: '10- Carta Alta', rank: 1, highCard: Math.max(...sortedValues) };
     }
 
     function updateGameState() {
