@@ -109,7 +109,7 @@
     let deck = [];
     let playerHand = [];
     let communityCards = [];
-    let phase = 'hand'; // Possible phases: hand, pre-flop, flop, river
+    let phase = 'hand';
 
     function initializeDeck() {
         deck = [];
@@ -168,7 +168,7 @@
             return parseInt(value);
         }).sort((a, b) => a - b);
 
-        for (let i = 0; i < allCards.length - 4; i++) {
+        for (let i = 0; i <= allCards.length - 5; i++) {
             const sequence = allCards.slice(i, i + 5);
             if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
                 return sequence;
@@ -177,33 +177,37 @@
         return null;
     }
 
+    function calculateWinPercentage(sequence) {
+        if (!sequence) return 15; // Low percentage for no sequence.
+
+        // Example percentages based on sequence strength:
+        const highestCard = Math.max(...sequence);
+        if (highestCard >= 10) return 85; // Strong high card sequence.
+        if (highestCard >= 6) return 65;  // Medium sequence strength.
+        return 45; // Weak sequence.
+    }
+
     function updateGameState() {
         const allCards = [...playerHand, ...communityCards];
-        let recommendation;
+        const sequence = checkSequence(allCards);
+        const recommendation = playerHand.length === 2
+            ? `Mão selecionada: ${playerHand.join(', ')}`
+            : 'Selecione duas cartas para sua mão.';
+        
         let sequenceText;
-
-        if (playerHand.length === 2) {
-            const sequence = checkSequence(allCards);
-            if (sequence) {
-                sequenceText = `Sequência encontrada: ${sequence.join(', ')}`;
-                recommendation = 'Recomendação: Aposte agressivamente!';
-            } else {
-                const possibleSequence = checkSequence([...playerHand, ...communityCards].slice(0, 4));
-                if (possibleSequence) {
-                    sequenceText = `Quase uma sequência: cartas ${possibleSequence.join(', ')}`;
-                    recommendation = 'Recomendação: Continue, boas chances para sequência!';
-                } else {
-                    sequenceText = 'Nenhuma sequência detectada.';
-                    recommendation = 'Recomendação: Jogue com cautela.';
-                }
-            }
+        if (sequence) {
+            const winPercentage = calculateWinPercentage(sequence);
+            sequenceText = `Sequência encontrada: ${sequence.join(', ')}.<br>` +
+                           `Chance de vitória: ${winPercentage}%.<br>` +
+                           `Recomendação: Jogue agressivamente! Sua mão é forte.`;
         } else {
-            recommendation = 'Selecione duas cartas para sua mão.';
-            sequenceText = '';
+            sequenceText = 'Nenhuma sequência encontrada.<br>' +
+                           'Chance de vitória: 15%.<br>' +
+                           'Recomendação: Jogue com cautela.';
         }
 
-        document.getElementById('recommendation').textContent = recommendation;
-        document.getElementById('sequence-check').textContent = sequenceText;
+        document.getElementById('recommendation').innerHTML = recommendation;
+        document.getElementById('sequence-check').innerHTML = sequenceText;
     }
 
     function restartGame() {
@@ -216,7 +220,5 @@
 
     initializeDeck();
 </script>
-
-
 </body>
 </html>
