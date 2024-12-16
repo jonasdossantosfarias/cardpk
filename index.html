@@ -159,65 +159,74 @@
         updateGameState();
     }
 
-    function checkSequence(cards) {
-        // Converte valores para números e ordena
-        const ranks = cards.map(card => card.slice(0, -1)).map(value => {
-            if (value === 'A') return 14; // Ace as high
-            if (value === 'K') return 13;
-            if (value === 'Q') return 12;
-            if (value === 'J') return 11;
-            return parseInt(value, 10);
-        }).sort((a, b) => a - b);
-
-        // Remove duplicados
-        const uniqueRanks = [...new Set(ranks)];
-
-        // Verifica sequências de 5 cartas consecutivas
-        for (let i = 0; i <= uniqueRanks.length - 5; i++) {
-            if (uniqueRanks[i + 4] - uniqueRanks[i] === 4) {
-                return uniqueRanks.slice(i, i + 5); // Retorna a sequência encontrada
-            }
-        }
-
-        // Verifica sequência especial: A-2-3-4-5
-        if (uniqueRanks.includes(14) && uniqueRanks.slice(0, 4).every((val, idx) => val === idx + 2)) {
-            return [1, 2, 3, 4, 5]; // Ace as low
-        }
-
-        return null; // Nenhuma sequência encontrada
+    function getCardValue(card) {
+        const value = card.slice(0, -1);
+        if (value === 'A') return 14;
+        if (value === 'K') return 13;
+        if (value === 'Q') return 12;
+        if (value === 'J') return 11;
+        return parseInt(value);
     }
 
-    function calculateWinPercentage(sequence) {
-        if (!sequence) return 15; // Baixa chance sem sequência
+    function getCardSuit(card) {
+        return card.slice(-1);
+    }
 
-        // Exemplos de porcentagem com base na força da sequência
-        const highestCard = Math.max(...sequence);
-        if (highestCard >= 10) return 85; // Sequência alta
-        if (highestCard >= 6) return 65;  // Sequência média
-        return 45; // Sequência baixa
+    function classifyHand(cards) {
+        const valuesCount = {};
+        const suitsCount = {};
+        const sortedValues = cards.map(getCardValue).sort((a, b) => a - b);
+
+        cards.forEach(card => {
+            const value = getCardValue(card);
+            const suit = getCardSuit(card);
+
+            valuesCount[value] = (valuesCount[value] || 0) + 1;
+            suitsCount[suit] = (suitsCount[suit] || 0) + 1;
+        });
+
+        const uniqueValues = Object.keys(valuesCount).map(Number).sort((a, b) => a - b);
+        const flushSuit = Object.keys(suitsCount).find(suit => suitsCount[suit] >= 5);
+        const isStraight = uniqueValues.some((value, index) => {
+            return uniqueValues.slice(index, index + 5).length === 5 &&
+                   uniqueValues[index + 4] - value === 4;
+        });
+
+        const isFlush = !!flushSuit;
+        const isStraightFlush = isStraight && isFlush;
+        const isRoyalFlush = isStraightFlush && uniqueValues.includes(10) && uniqueValues.includes(14);
+
+        const valueCounts = Object.values(valuesCount);
+        const hasFourOfAKind = valueCounts.includes(4);
+        const hasThreeOfAKind = valueCounts.includes(3);
+        const pairs = valueCounts.filter(count => count === 2).length;
+
+        if (isRoyalFlush) return { type: 'Royal Straight Flush', rank: 10 };
+        if (isStraightFlush) return { type: 'Straight Flush', rank: 9 };
+        if (hasFourOfAKind) return { type: 'Quadra', rank: 8 };
+        if (hasThreeOfAKind && pairs > 0) return { type: 'Full House', rank: 7 };
+        if (isFlush) return { type: 'Flush', rank: 6 };
+        if (isStraight) return { type: 'Straight', rank: 5 };
+        if (hasThreeOfAKind) return { type: 'Trinca', rank: 4 };
+        if (pairs === 2) return { type: 'Dois Pares', rank: 3 };
+        if (pairs === 1) return { type: 'Par', rank: 2 };
+
+        return { type: 'Carta Alta', rank: 1, highCard: Math.max(...sortedValues) };
     }
 
     function updateGameState() {
         const allCards = [...playerHand, ...communityCards];
-        const sequence = checkSequence(allCards);
+        const handClassification = classifyHand(allCards);
+
         const recommendation = playerHand.length === 2
             ? `Mão selecionada: ${playerHand.join(', ')}`
             : 'Selecione duas cartas para sua mão.';
-        
-        let sequenceText;
-        if (sequence) {
-            const winPercentage = calculateWinPercentage(sequence);
-            sequenceText = `Sequência encontrada: ${sequence.join(', ')}.<br>` +
-                           `Chance de vitória: ${winPercentage}%.<br>` +
-                           `Recomendação: Jogue agressivamente!`;
-        } else {
-            sequenceText = 'Nenhuma sequência encontrada.<br>' +
-                           'Chance de vitória: 15%.<br>' +
-                           'Recomendação: Jogue com cautela.';
-        }
 
+        const classificationText = `Classificação da mão: ${handClassification.type}.<br>` +
+                                   `Recomendação: ${handClassification.rank >= 6 ? 'Jogue agressivamente!' : 'Jogue com cautela.'}`;
+        
         document.getElementById('recommendation').innerHTML = recommendation;
-        document.getElementById('sequence-check').innerHTML = sequenceText;
+        document.getElementById('sequence-check').innerHTML = classificationText;
     }
 
     function restartGame() {
