@@ -124,12 +124,18 @@
     function renderDeck() {
         const deckElement = document.getElementById('deck');
         deckElement.innerHTML = '';
-        deck.forEach(card => {
-            const cardElement = document.createElement('div');
-            cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
-            cardElement.textContent = card;
-            cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
-            deckElement.appendChild(cardElement);
+
+        suits.forEach(suit => {
+            const suitRow = document.createElement('div');
+            suitRow.classList.add('suit-row');
+            deck.filter(card => card.includes(suit)).forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = `card ${card.includes('♥') || card.includes('♦') ? 'red' : 'black'}`;
+                cardElement.textContent = card;
+                cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
+                suitRow.appendChild(cardElement);
+            });
+            deckElement.appendChild(suitRow);
         });
     }
 
