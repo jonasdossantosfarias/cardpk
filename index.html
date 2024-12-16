@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise de Poker Inteligente</title>
    <style>
-    /* Configurações básicas para o corpo */
     body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -17,56 +16,40 @@
         align-items: center;
         min-height: 100vh;
     }
-
-    /* Títulos */
     h2 {
-        font-size: 2rem;
+        font-size: 1.5rem;
         color: #495057;
         margin: 20px 0 10px 0;
-        text-align: center;
     }
-
-    /* Contêiner de informações */
-    .info-container {
-        margin: 15px;
-        padding: 15px;
-        background-color: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        width: 100%;
-        max-width: 600px;
-        text-align: center;
-    }
-
-    /* Configurações do deck */
     .deck {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
+        flex-direction: column;
+        gap: 20px;
         padding: 20px;
         background: #ffffff;
         border: 1px solid #ced4da;
         border-radius: 8px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         margin-top: 20px;
-        max-width: 100%;
+        width: 100%;
+        max-width: 800px;
     }
-
-    /* Cada linha de naipe */
     .suit-row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
-        justify-content: center;
-        width: 100%;
+        align-items: center;
+        gap: 8px;
+        font-weight: bold;
+        margin-bottom: 10px;
     }
-
-    /* Cartas */
+    .suit-row::before {
+        content: attr(data-suit);
+        font-size: 18px;
+        color: #495057;
+        margin-right: 10px;
+    }
     .card {
-        width: 15%;
-        max-width: 50px;
-        aspect-ratio: 5 / 7; /* Proporção visual */
+        width: 50px;
+        height: 70px;
         border-radius: 5px;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
         display: flex;
@@ -79,24 +62,12 @@
         background-color: #ffffff;
         border: 1px solid #ced4da;
     }
-
-    /* Cartas vermelhas */
-    .card.red {
-        color: #e74c3c;
-    }
-
-    /* Cartas pretas */
-    .card.black {
-        color: #212529;
-    }
-
-    /* Efeitos ao passar o mouse */
+    .card.red { color: #e74c3c; }
+    .card.black { color: #212529; }
     .card:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     }
-
-    /* Cores das seleções */
     .selected-hand {
         background-color: #3498db;
         color: white !important;
@@ -113,8 +84,6 @@
         background-color: #e74c3c;
         color: white !important;
     }
-
-    /* Botões */
     button {
         padding: 10px 20px;
         font-size: 16px;
@@ -123,47 +92,10 @@
         color: white;
         border-radius: 5px;
         cursor: pointer;
-        margin: 10px 5px;
-        transition: background-color 0.3s ease-in-out;
+        margin: 20px 0;
     }
-
     button:hover {
-        background-color: #296d9c;
-    }
-
-    /* Responsividade */
-    @media (max-width: 768px) {
-        h2 {
-            font-size: 1.5rem;
-        }
-
-        .card {
-            width: 20%;
-            max-width: 40px;
-            font-size: 12px;
-        }
-
-        button {
-            font-size: 14px;
-            padding: 8px 15px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        h2 {
-            font-size: 1.2rem;
-        }
-
-        .card {
-            width: 22%;
-            max-width: 35px;
-            font-size: 10px;
-        }
-
-        button {
-            font-size: 12px;
-            padding: 6px 12px;
-        }
+        opacity: 0.9;
     }
 </style>
 
