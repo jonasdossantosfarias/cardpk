@@ -98,7 +98,7 @@
     <h2>Análise de Poker Inteligente</h2>
     <div class="info-container">
         <div id="recommendation" style="margin-bottom: 10px; font-size: 16px; color: #343a40;">Recomendação: </div>
-        <div id="probabilities" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Probabilidades: </div>
+        <div id="sequence-check" style="margin-bottom: 10px; font-size: 14px; color: #6c757d;">Sequência: </div>
     </div>
     <div class="deck" id="deck"></div>
     <button onclick="restartGame()">Reiniciar Jogo</button>
@@ -159,16 +159,37 @@
         updateGameState();
     }
 
+    function checkSequence(cards) {
+        const allCards = cards.map(card => card.slice(0, -1)).map(value => {
+            if (value === 'A') return 14;
+            if (value === 'K') return 13;
+            if (value === 'Q') return 12;
+            if (value === 'J') return 11;
+            return parseInt(value);
+        }).sort((a, b) => a - b);
+
+        for (let i = 0; i <= allCards.length - 5; i++) {
+            const sequence = allCards.slice(i, i + 5);
+            if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
+                return sequence;
+            }
+        }
+
+        return null;
+    }
+
     function updateGameState() {
+        const allCards = [...playerHand, ...communityCards];
+        const sequence = checkSequence(allCards);
         const recommendation = playerHand.length === 2
             ? `Mão selecionada: ${playerHand.join(', ')}`
             : 'Selecione duas cartas para sua mão.';
-        const probabilities = communityCards.length
-            ? `Cartas comunitárias: ${communityCards.join(', ')}`
-            : 'Selecione as cartas comunitárias.';
+        const sequenceText = sequence
+            ? `Sequência encontrada: ${sequence.join(', ')}`
+            : 'Nenhuma sequência encontrada.';
         
         document.getElementById('recommendation').textContent = recommendation;
-        document.getElementById('probabilities').textContent = probabilities;
+        document.getElementById('sequence-check').textContent = sequenceText;
     }
 
     function restartGame() {
