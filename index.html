@@ -109,7 +109,7 @@
     let deck = [];
     let playerHand = [];
     let communityCards = [];
-    let phase = 'hand'; // Possible phases: hand, pre-flop, flop, river
+    let phase = 'hand';
 
     function initializeDeck() {
         deck = [];
@@ -168,13 +168,12 @@
             return parseInt(value);
         }).sort((a, b) => a - b);
 
-        for (let i = 0; i <= allCards.length - 5; i++) {
+        for (let i = 0; i < allCards.length - 4; i++) {
             const sequence = allCards.slice(i, i + 5);
             if (sequence[4] - sequence[0] === 4 && new Set(sequence).size === 5) {
                 return sequence;
             }
         }
-
         return null;
     }
 
@@ -185,8 +184,8 @@
             ? `Mão selecionada: ${playerHand.join(', ')}`
             : 'Selecione duas cartas para sua mão.';
         const sequenceText = sequence
-            ? `Sequência encontrada: ${sequence.join(', ')}`
-            : 'Nenhuma sequência encontrada.';
+            ? `Sequência encontrada: ${sequence.join(', ')}. Recomendação: Aposte agressivamente!`
+            : 'Nenhuma sequência encontrada. Recomendação: Jogue com cautela.';
         
         document.getElementById('recommendation').textContent = recommendation;
         document.getElementById('sequence-check').textContent = sequenceText;
@@ -202,5 +201,6 @@
 
     initializeDeck();
 </script>
+
 </body>
 </html>
