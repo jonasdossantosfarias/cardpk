@@ -1,44 +1,41 @@
+<!DOCTYPE html>
 <html>
 <head>
     <title>Análise de Poker Inteligente</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
+            margin: 20px;
             background-color: #f8f9fa;
-            color: #212529;
         }
         h2 {
             text-align: center;
-            margin-bottom: 20px;
-        }
-        .deck {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-        }
-        .card {
-            width: 50px;
-            height: 70px;
-            border-radius: 5px;
-            border: 1px solid #ced4da;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            background-color: #fff;
-            transition: transform 0.2s ease-in-out;
-        }
-        .card:hover {
-            transform: scale(1.1);
         }
         .info-container {
             margin-top: 20px;
             text-align: center;
+        }
+        .deck {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .card {
+            width: 50px;
+            height: 70px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-color: white;
+        }
+        .card.selected {
+            background-color: #007bff;
+            color: white;
         }
     </style>
 </head>
@@ -60,27 +57,26 @@
         let communityCards = [];
 
         function initializeDeck() {
-            let deck = [];
+            const deck = [];
             suits.forEach(suit => values.forEach(value => deck.push(`${value}${suit}`)));
+
             const deckElement = document.getElementById('deck');
             deck.forEach(card => {
                 const cardElement = document.createElement('div');
                 cardElement.className = 'card';
                 cardElement.textContent = card;
-                cardElement.addEventListener('click', () => toggleCardSelection(card, cardElement));
+                cardElement.onclick = () => toggleCardSelection(card, cardElement);
                 deckElement.appendChild(cardElement);
             });
         }
 
         function toggleCardSelection(card, cardElement) {
-            if (playerHand.length < 2) {
+            if (playerHand.length < 2 && !playerHand.includes(card)) {
                 playerHand.push(card);
-                cardElement.style.backgroundColor = '#3498db';
-                cardElement.style.color = '#fff';
-            } else if (communityCards.length < 5) {
+                cardElement.classList.add('selected');
+            } else if (communityCards.length < 5 && !communityCards.includes(card)) {
                 communityCards.push(card);
-                cardElement.style.backgroundColor = '#e67e22';
-                cardElement.style.color = '#fff';
+                cardElement.classList.add('selected');
             }
             analyzeGameState();
         }
@@ -88,30 +84,50 @@
         function analyzeGameState() {
             const allCards = [...playerHand, ...communityCards];
             const handStrength = evaluateHand(allCards);
-            const probability = calculateProbability(handStrength);
             const sequenceInfo = analyzeSequence(allCards);
 
-            document.getElementById('handStrength').innerHTML = `Força da Mão: ${handStrength}`;
-            document.getElementById('probability').innerHTML = `Probabilidade de Vitória: ${probability}%`;
-            document.getElementById('recommendation').innerHTML = probability > 50 ? 'Recomendação: Aposte' : 'Recomendação: Espere';
-            document.getElementById('sequencePossibility').innerHTML = `Possibilidade de Sequência: ${sequenceInfo.possibility}`;
-            document.getElementById('sequenceList').innerHTML = `Sequência Construída: ${sequenceInfo.list.join(', ')}`;
+            document.getElementById('handStrength').textContent = `Força da Mão: ${handStrength}`;
+            document.getElementById('probability').textContent = `Probabilidade de Vitória: ${handStrength === 'Sequência' ? '80%' : '30%'}`;
+            document.getElementById('recommendation').textContent = handStrength === 'Sequência' ? 'Recomendação: Aposte' : 'Recomendação: Cautela';
+            document.getElementById('sequencePossibility').textContent = `Possibilidade de Sequência: ${sequenceInfo.possibility ? 'Alta' : 'Baixa'}`;
+            document.getElementById('sequenceList').textContent = `Sequências Construídas: ${sequenceInfo.list.join(', ')}`;
         }
 
         function evaluateHand(cards) {
-            if (cards.length < 2) return "Indefinida";
-            const highCard = cards.some(card => card.startsWith('A')) ? "Alta" : "Baixa";
-            return cards.length >= 5 ? "Sequência" : `Carta ${highCard}`;
-        }
-
-        function calculateProbability(handStrength) {
-            return handStrength === "Sequência" ? 80 : handStrength.includes("Alta") ? 60 : 30;
+            const ranks = cards.map(card => card.slice(0, -1));
+            if (isStraight(ranks)) return 'Sequência';
+            if (ranks.includes('A')) return 'Carta Alta';
+            return 'Carta Baixa';
         }
 
         function analyzeSequence(cards) {
-            const sortedValues = cards.map(card => values.indexOf(card.slice(0, -1))).sort((a, b) => a - b);
-            const possibility = sortedValues.length >= 4 ? "Alta" : "Baixa";
-            return { possibility, list: sortedValues.map(v => values[v]) };
+            const cardRanks = cards.map(card => values.indexOf(card.slice(0, -1)));
+            cardRanks.sort((a, b) => a - b);
+
+            let sequenceList = [];
+            let currentSequence = [cardRanks[0]];
+            for (let i = 1; i < cardRanks.length; i++) {
+                if (cardRanks[i] === cardRanks[i - 1] + 1) {
+                    currentSequence.push(cardRanks[i]);
+                } else {
+                    if (currentSequence.length >= 5) sequenceList.push(currentSequence);
+                    currentSequence = [cardRanks[i]];
+                }
+            }
+            if (currentSequence.length >= 5) sequenceList.push(currentSequence);
+
+            return {
+                possibility: sequenceList.length > 0,
+                list: sequenceList.map(seq => seq.map(rank => values[rank]).join(' - '))
+            };
+        }
+
+        function isStraight(ranks) {
+            const indices = ranks.map(rank => values.indexOf(rank)).sort((a, b) => a - b);
+            for (let i = 0; i <= indices.length - 5; i++) {
+                if (indices[i + 4] - indices[i] === 4) return true;
+            }
+            return false;
         }
 
         initializeDeck();
